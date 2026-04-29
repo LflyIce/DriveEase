@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+client/dist/
+
+# Local databases and runtime files
+server/database.sqlite
+*.sqlite
+*.sqlite3
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local tool/editor state
+.agents/
+.claude/
+.upload-git/
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
