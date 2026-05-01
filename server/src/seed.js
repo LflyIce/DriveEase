@@ -43,20 +43,20 @@ async function seed() {
 
   // Commercial insurance types
   ['交强险', '代收车船税'].forEach((name) => {
-    run(`INSERT INTO compulsory_insurance_type (name) VALUES ('${name}')`);
+    run(`INSERT INTO compulsory_insurance_type (name, is_common) VALUES ('${name}', 1)`);
   });
 
   [
-    ['第三者责任险', 10],
-    ['车辆损失险', 20],
-    ['车上人员责任险（司机）', 30],
-    ['车上人员责任险（乘客）', 40],
-    ['医保外医疗费用责任险', 50],
-    ['划痕险', 60],
-    ['玻璃单独破碎险', 70],
-    ['车身盗抢险', 80],
-  ].forEach(([name, sortOrder]) => {
-    run(`INSERT INTO commercial_insurance_type (name, sort_order, status) VALUES ('${name}', ${sortOrder}, '启用')`);
+    ['第三者责任险', 10, 1],
+    ['车辆损失险', 20, 1],
+    ['车上人员责任险（司机）', 30, 0],
+    ['车上人员责任险（乘客）', 40, 0],
+    ['医保外医疗费用责任险', 50, 0],
+    ['划痕险', 60, 0],
+    ['玻璃单独破碎险', 70, 0],
+    ['车身盗抢险', 80, 0],
+  ].forEach(([name, sortOrder, isCommon]) => {
+    run(`INSERT INTO commercial_insurance_type (name, sort_order, status, is_common) VALUES ('${name}', ${sortOrder}, '启用', ${isCommon})`);
   });
 
   [

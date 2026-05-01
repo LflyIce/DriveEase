@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Button, Popconfirm, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import { ModalForm, ProFormText, ProTable } from '@ant-design/pro-components';
+import { ModalForm, ProFormCheckbox, ProFormText, ProTable } from '@ant-design/pro-components';
 import {
   createCommercialInsuranceType,
   deleteCommercialInsuranceType,
@@ -17,6 +17,7 @@ export default function CommercialInsurancePage() {
   const columns = [
     { title: '序号', dataIndex: 'id', width: 70, search: false },
     { title: '保险名称', dataIndex: 'name', width: 220 },
+    { title: '常用', dataIndex: 'is_common', width: 90, search: false, render: (_, row) => (row.is_common ? '是' : '否') },
     { title: '更新时间', dataIndex: 'updated_at', width: 170, search: false },
     {
       title: '操作',
@@ -86,7 +87,7 @@ export default function CommercialInsurancePage() {
           setModalVisit(open);
           if (!open) setEditingRow(null);
         }}
-        initialValues={editingRow || {}}
+        initialValues={{ ...(editingRow || {}), is_common: Boolean(editingRow?.is_common) }}
         modalProps={{ destroyOnClose: true }}
         onFinish={async (values) => {
           if (editingRow) {
@@ -101,6 +102,7 @@ export default function CommercialInsurancePage() {
         }}
       >
         <ProFormText name="name" label="保险名称" rules={[{ required: true, message: '请输入保险名称' }]} width="md" />
+        <ProFormCheckbox name="is_common">设为常用，开保单时默认显示</ProFormCheckbox>
       </ModalForm>
     </>
   );

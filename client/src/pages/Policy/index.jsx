@@ -28,6 +28,7 @@ import {
   updatePolicy,
   updatePolicyStatus,
 } from '../../services/api';
+import { buildDefaultInsuranceValues, mergeCommonInsuranceDefaults } from './policyDefaults';
 
 const statusColors = {
   生效: 'green',
@@ -50,7 +51,7 @@ const statusOptions = [
   { label: '已退保', value: '已退保' },
 ];
 
-function getDefaultPolicyValues() {
+function getDefaultPolicyValues({ compulsoryTypes = [], commercialTypes = [] } = {}) {
   const now = dayjs();
   return {
     issue_time: now.format('YYYY-MM-DD HH:mm:ss'),
@@ -60,10 +61,7 @@ function getDefaultPolicyValues() {
     effective_date: now,
     expiry_date: now.add(1, 'year'),
     certificate_type: '身份证',
-    compulsory_enabled: false,
-    commercial_enabled: false,
-    compulsory_items: [],
-    commercial_items: [],
+    ...buildDefaultInsuranceValues({ compulsoryTypes, commercialTypes }),
   };
 }
 
@@ -746,6 +744,7 @@ export default function PolicyPage({ mode = 'create' }) {
   const [vehicleOptions, setVehicleOptions] = useState([]);
   const [insuranceCompanyOptions, setInsuranceCompanyOptions] = useState([]);
   const [userOptions, setUserOptions] = useState([]);
+  const commonDefaultsAppliedRef = useRef(false);
   const { token } = theme.useToken();
 
   const loadRelations = async () => {
@@ -809,11 +808,24 @@ export default function PolicyPage({ mode = 'create' }) {
   }, []);
 
   useEffect(() => {
-    if (mode === 'create') {
-      createForm.resetFields();
-      createForm.setFieldsValue(getDefaultPolicyValues());
+    if (mode === 'create' && !createForm.isFieldsTouched()) {
+      createForm.setFieldsValue(getDefaultPolicyValues({ compulsoryTypes, commercialTypes }));
     }
-  }, [createForm, mode]);
+  }, [commercialTypes, compulsoryTypes, createForm, mode]);
+
+  useEffect(() => {
+    if (mode !== 'create' || commonDefaultsAppliedRef.current) return;
+    const commonDefaults = buildDefaultInsuranceValues({ compulsoryTypes, commercialTypes });
+    if (!commonDefaults.compulsory_enabled && !commonDefaults.commercial_enabled) return;
+
+    createForm.setFieldsValue(
+      mergeCommonInsuranceDefaults(createForm.getFieldsValue(true), {
+        compulsoryTypes,
+        commercialTypes,
+      })
+    );
+    commonDefaultsAppliedRef.current = true;
+  }, [commercialTypes, compulsoryTypes, createForm, mode]);
 
   const handleOpenEditForm = (row) => {
     const compulsoryDetail = normalizeCompulsoryDetail(row.compulsory_detail);
@@ -909,7 +921,8 @@ export default function PolicyPage({ mode = 'create' }) {
     await createPolicy(data);
     message.success('创建成功');
     createForm.resetFields();
-    createForm.setFieldsValue(getDefaultPolicyValues());
+    createForm.setFieldsValue(getDefaultPolicyValues({ compulsoryTypes, commercialTypes }));
+    commonDefaultsAppliedRef.current = true;
     return true;
   };
 
@@ -1087,7 +1100,8 @@ export default function PolicyPage({ mode = 'create' }) {
                 resetButtonProps: {
                   onClick: () => {
                     createForm.resetFields();
-                    createForm.setFieldsValue(getDefaultPolicyValues());
+                    createForm.setFieldsValue(getDefaultPolicyValues({ compulsoryTypes, commercialTypes }));
+                    commonDefaultsAppliedRef.current = true;
                   },
                 },
               }}

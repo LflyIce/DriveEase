@@ -135,6 +135,7 @@ export async function initDB() {
     CREATE TABLE IF NOT EXISTS compulsory_insurance_type (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
+      is_common INTEGER NOT NULL DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -145,12 +146,15 @@ export async function initDB() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
       status TEXT NOT NULL DEFAULT '启用' CHECK(status IN ('启用', '禁用')),
+      is_common INTEGER NOT NULL DEFAULT 0,
       sort_order INTEGER DEFAULT 0,
       remark TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  ensureColumn('compulsory_insurance_type', 'is_common', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn('commercial_insurance_type', 'is_common', 'INTEGER NOT NULL DEFAULT 0');
 
   const compulsoryTypeCount = get('SELECT COUNT(*) as count FROM compulsory_insurance_type')?.count || 0;
   if (compulsoryTypeCount === 0) {
