@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
-import { ModalForm, ProFormText } from '@ant-design/pro-components';
+import { ModalForm, ProFormText, ProLayout } from '@ant-design/pro-components';
 import { App as AntdApp, Badge, Button, ConfigProvider, Dropdown, Space, Tooltip, message, theme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import {
-  BellOutlined,
   BankOutlined,
+  BellOutlined,
   BgColorsOutlined,
   CarOutlined,
   DashboardOutlined,
@@ -20,7 +20,7 @@ import {
   TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { ProLayout } from '@ant-design/pro-components';
+import AuthPage from './pages/Auth';
 import CustomerPage from './pages/Customer';
 import Dashboard from './pages/Dashboard';
 import LogPage from './pages/Log';
@@ -31,6 +31,7 @@ import InsuranceCompanyPage from './pages/InsuranceCompany';
 import RenewalPage from './pages/Renewal';
 import UserPage from './pages/User';
 import VehiclePage from './pages/Vehicle';
+import { authStorageKey, createAuthenticatedUser, defaultUser, userStorageKey } from './auth/authModel';
 import { updateUser } from './services/api';
 
 const menuRoutes = [
@@ -46,19 +47,13 @@ const menuRoutes = [
   { path: '/logs', name: '操作日志', icon: <FileSearchOutlined /> },
 ];
 
-const defaultUser = {
-  id: 1,
-  username: 'admin',
-  role: '管理员',
-  email: 'admin@insurance.com',
-  phone: '13800000001',
-  status: '启用',
-};
-
-const userStorageKey = 'car_insurance_current_user';
 const themeStorageKey = 'car_insurance_theme_mode';
 
 function getStoredUser() {
+  if (localStorage.getItem(authStorageKey) !== 'authenticated') {
+    return null;
+  }
+
   try {
     return JSON.parse(localStorage.getItem(userStorageKey)) || defaultUser;
   } catch {
@@ -84,7 +79,7 @@ function HeaderActions({ currentUser, themeMode, onThemeChange, onPasswordChange
       <Tooltip title="通知">
         <Button type="text" icon={<Badge dot={false}><BellOutlined /></Badge>} />
       </Tooltip>
-      <Tooltip title="信息">
+      <Tooltip title="消息">
         <Button type="text" icon={<Badge dot={false}><MessageOutlined /></Badge>} />
       </Tooltip>
       <Dropdown
@@ -122,7 +117,8 @@ function LayoutFrame({ currentUser, themeMode, onThemeChange, passwordModalOpen,
 
   const handleLogout = () => {
     localStorage.removeItem(userStorageKey);
-    setCurrentUser(defaultUser);
+    localStorage.removeItem(authStorageKey);
+    setCurrentUser(null);
     message.success('已退出登录');
   };
 
@@ -265,7 +261,14 @@ function AppShell() {
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem(userStorageKey, JSON.stringify(currentUser || defaultUser));
+    if (currentUser) {
+      localStorage.setItem(userStorageKey, JSON.stringify(currentUser));
+      localStorage.setItem(authStorageKey, 'authenticated');
+      return;
+    }
+
+    localStorage.removeItem(userStorageKey);
+    localStorage.removeItem(authStorageKey);
   }, [currentUser]);
 
   useEffect(() => {
@@ -278,19 +281,33 @@ function AppShell() {
     return [theme.defaultAlgorithm];
   }, [themeMode]);
 
+  const handleLogin = (values) => {
+    setCurrentUser(createAuthenticatedUser(values));
+    message.success('登录成功');
+  };
+
+  const handleRegister = (values) => {
+    localStorage.setItem('car_insurance_registered_user', JSON.stringify(createAuthenticatedUser(values)));
+    message.success('注册成功，请登录');
+  };
+
   return (
     <ConfigProvider locale={zhCN} theme={{ algorithm: algorithms }}>
       <AntdApp>
-        <BrowserRouter>
-          <LayoutFrame
-            currentUser={currentUser}
-            themeMode={themeMode}
-            onThemeChange={setThemeMode}
-            passwordModalOpen={passwordModalOpen}
-            setPasswordModalOpen={setPasswordModalOpen}
-            setCurrentUser={setCurrentUser}
-          />
-        </BrowserRouter>
+        {currentUser ? (
+          <BrowserRouter>
+            <LayoutFrame
+              currentUser={currentUser}
+              themeMode={themeMode}
+              onThemeChange={setThemeMode}
+              passwordModalOpen={passwordModalOpen}
+              setPasswordModalOpen={setPasswordModalOpen}
+              setCurrentUser={setCurrentUser}
+            />
+          </BrowserRouter>
+        ) : (
+          <AuthPage onLogin={handleLogin} onRegister={handleRegister} />
+        )}
       </AntdApp>
     </ConfigProvider>
   );
