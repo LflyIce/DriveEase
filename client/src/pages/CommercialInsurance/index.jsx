@@ -1,0 +1,107 @@
+import React, { useRef, useState } from 'react';
+import { Button, Popconfirm, message } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import { ModalForm, ProFormText, ProTable } from '@ant-design/pro-components';
+import {
+  createCommercialInsuranceType,
+  deleteCommercialInsuranceType,
+  getCommercialInsuranceTypes,
+  updateCommercialInsuranceType,
+} from '../../services/api';
+
+export default function CommercialInsurancePage() {
+  const actionRef = useRef();
+  const [modalVisit, setModalVisit] = useState(false);
+  const [editingRow, setEditingRow] = useState(null);
+
+  const columns = [
+    { title: '序号', dataIndex: 'id', width: 70, search: false },
+    { title: '保险名称', dataIndex: 'name', width: 220 },
+    { title: '更新时间', dataIndex: 'updated_at', width: 170, search: false },
+    {
+      title: '操作',
+      valueType: 'option',
+      width: 140,
+      render: (_, row) => [
+        <Button
+          key="edit"
+          type="link"
+          onClick={() => {
+            setEditingRow(row);
+            setModalVisit(true);
+          }}
+        >
+          编辑
+        </Button>,
+        <Popconfirm
+          key="del"
+          title="确认删除该商业险种？"
+          onConfirm={async () => {
+            await deleteCommercialInsuranceType(row.id);
+            message.success('删除成功');
+            actionRef.current?.reload();
+          }}
+        >
+          <Button type="link" danger>
+            删除
+          </Button>
+        </Popconfirm>,
+      ],
+    },
+  ];
+
+  return (
+    <>
+      <ProTable
+        headerTitle="商业险管理"
+        actionRef={actionRef}
+        rowKey="id"
+        columns={columns}
+        search={{ labelWidth: 'auto' }}
+        request={async (params) => {
+          const { current, pageSize, keyword } = params;
+          const res = await getCommercialInsuranceTypes({ page: current, pageSize, keyword });
+          return { data: res.data, total: res.total, success: true };
+        }}
+        toolBarRender={() => [
+          <Button
+            key="add"
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setEditingRow(null);
+              setModalVisit(true);
+            }}
+          >
+            新增商业险
+          </Button>,
+        ]}
+        pagination={{ defaultPageSize: 10 }}
+      />
+
+      <ModalForm
+        title={editingRow ? '编辑商业险' : '新增商业险'}
+        open={modalVisit}
+        onOpenChange={(open) => {
+          setModalVisit(open);
+          if (!open) setEditingRow(null);
+        }}
+        initialValues={editingRow || {}}
+        modalProps={{ destroyOnClose: true }}
+        onFinish={async (values) => {
+          if (editingRow) {
+            await updateCommercialInsuranceType(editingRow.id, values);
+            message.success('更新成功');
+          } else {
+            await createCommercialInsuranceType(values);
+            message.success('创建成功');
+          }
+          actionRef.current?.reload();
+          return true;
+        }}
+      >
+        <ProFormText name="name" label="保险名称" rules={[{ required: true, message: '请输入保险名称' }]} width="md" />
+      </ModalForm>
+    </>
+  );
+}
