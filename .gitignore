@@ -5,9 +5,6 @@ node_modules/
 dist/
 client/dist/
 
-# Scaffolded frontend (Vue-Vben-Admin v5) — separate pnpm monorepo; will replace client/ after cutover
-client-vue/
-
 # Local databases and runtime files
 server/database.sqlite
 *.sqlite
