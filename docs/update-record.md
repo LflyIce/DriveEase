@@ -172,3 +172,28 @@
 - 结果：构建通过。Vite 输出 chunk 体积提醒，未阻塞构建。
 - 已检查：`http://localhost:5173/policies` 与 `http://localhost:3001/api/policies?page=1&pageSize=1`
 - 结果：页面与接口均返回 200。
+
+## 2026-07-08 Vue-Vben 迁移与项目整理
+
+### 背景
+
+- 前端由 React 单栈引入 Vue-Vben Admin v5，新增 `client-vue/` 作为新前端，与 `client/` 双栈并存。
+- 早期 `client-vue/` 被临时忽略在 `.gitignore` 之外、且残留了模板的嵌套 `.git`，导致新前端代码此前游离于版本控制。
+- 4 份文档与 `CLAUDE.md` 全部只描述 React，`design-document.md` 的数据库设计失真（少 3 表 + 保单 12 个扩展列），且含未实现的"切换 MySQL"虚构内容。
+
+### 变更范围
+
+- 仓库：将 `client-vue/` 纳入版本控制、删除残留的 `client-vue/.git` 与模板身份文件、清理 `.agents/` 与 `.upload-git/`、整理 `main` 分支并将旧 React 历史归档到 tag `legacy/react`。
+- 文档：重写 `design-document.md`（9 表全字段）/ `development-guide.md` / `deployment-startup.md`，更新 `CLAUDE.md` / `README.md`。
+
+### 更新内容
+
+- 前端：`client-vue/`（Vue 3 + Vben Admin v5）正式纳入仓库，迁移度约 85%（客户/车辆/险种/续保/用户/日志/仪表盘/登录已迁；**保单页 create/query 双模式待补**）；生产 env 待修、server 静态托管待切换，故 `client/` 暂保留为生产前端。
+- 后端：`server/` 与 `client/` 配置不变；`POST /api/users/login` 由 client-vue 登录复用，确认保留（非死端点）。
+- 文档：据实重写数据库设计（9 表 + policy 12 个扩展列 + JSON 明细列）、路由清单（10 组）、API 清单；移除虚构的"切换 MySQL"章节；如实标注 policy 双日期字段等 legacy 点。
+- 清理：删除 `.agents/`、`.upload-git/`、`docs/plans/`，以及 `client-vue/` 的模板身份文件（README 三件套 / LICENSE / tea.yaml / code-workspace）。
+
+### 验证记录
+
+- 已确认：数据库设计与 `server/src/database.js` initDB 逐表一致；文档命令与各 `package.json` scripts 一致。
+- 已确认：`POST /api/users/login` 被 client-vue 调用，未误删；client/ 仍为可用生产前端。

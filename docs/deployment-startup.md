@@ -4,7 +4,8 @@
 
 ```text
 DriveEase/
-├─ client/              # 前端项目，React + Vite + Ant Design
+├─ client/              # 前端（React，当前生产前端）
+├─ client-vue/          # 前端（Vue-Vben，迁移中，独立 pnpm monorepo）
 ├─ server/              # 后端项目，Express + sql.js
 ├─ docs/                # 项目文档
 ├─ images/              # 参考图片和业务截图
@@ -14,9 +15,12 @@ DriveEase/
 
 当前项目使用 npm workspaces 管理前后端：
 
-- `client`：前端页面和静态构建产物。
-- `server`：后端 API、数据库初始化和静态文件服务。
+- `client`：前端页面和静态构建产物（React，**当前生产前端**）。
+- `client-vue`：新前端（Vue-Vben Admin v5，迁移中），是**独立的 pnpm monorepo**，不在根 workspaces 内，要求 Node 22.18+/24 + pnpm 11+。
+- `server`：后端 API、数据库初始化和静态文件服务（生产模式托管 `client/dist`）。
 - `server/database.sqlite`：运行后生成的本地数据库文件，已被 `.gitignore` 排除。
+
+> 前端正处于 React → Vue-Vben 迁移期，双前端并存。迁移完成前生产部署仍以 `client/` 为准。
 
 ## 2. 环境要求
 
@@ -127,6 +131,9 @@ npm run build -w client
 ```text
 client/dist/
 ```
+
+> 当前生产前端为 `client/`，由 Express 在生产模式下托管 `client/dist`（含 SPA 回退）。
+> 新前端 `client-vue/` 迁移完成后，改用 `pnpm build:antd` 构建（产物 `client-vue/apps/web-antd/dist/`），并需同步：①把 `apps/web-antd/.env.production` 的 `VITE_GLOB_API_URL` 改为 `/api`；②修改 `server/src/app.js` 的静态托管路径指向新产物；③验证后再切换、删除 `client/`。
 
 ### 5.4 初始化数据库
 

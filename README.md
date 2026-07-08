@@ -1,6 +1,6 @@
 # DriveEase
 
-DriveEase 是一个车辆保险保单管理系统，前端使用 React、Vite、Ant Design，后端使用 Express 和 sql.js。
+DriveEase 是一个车辆保险保单管理系统，后端使用 Express 和 sql.js。前端正由 React（`client/`，当前生产前端）向 Vue-Vben Admin（`client-vue/`，迁移中）迁移，双前端并存。
 
 ## 快速启动
 
@@ -35,8 +35,21 @@ npm run dev -w client
 
 访问地址：
 
-- 前端页面：`http://localhost:5173`
+- 前端页面（client/）：`http://localhost:5173`
 - 后端 API：`http://localhost:3001`
+
+### 新前端 client-vue（Vue-Vben，迁移中）
+
+`client-vue/` 是正在迁移的新前端，独立 pnpm monorepo，要求 Node 22.18+/24 + pnpm 11+。需先启动后端，再：
+
+```bash
+cd client-vue
+corepack enable && corepack prepare pnpm@latest --activate
+pnpm install
+pnpm dev:antd          # 端口 5666，/api 代理到 :3001
+```
+
+迁移约完成 85%（保单页待补）；迁移完成前生产部署仍使用 `client/`。详见 [开发文档](docs/development-guide.md)。
 
 ## 生产构建
 

@@ -8,15 +8,21 @@ DriveEase — a car-insurance policy management system (车辆保单管理系统
 
 ## Commands
 
-This is an npm **workspaces** monorepo (`client`, `server`) requiring **Node 18+ / npm 9+**. Scripts are run from the repo root with the `-w` flag:
+Two frontends coexist during the React → Vue-Vben migration. `client/` (React, npm) + `server/` form an npm **workspaces** monorepo needing **Node 18+ / npm 9+**; `client-vue/` (Vue-Vben Admin v5) is a **separate pnpm monorepo** needing **Node 22.18+/24 + pnpm 11+** (enable via corepack). Run root scripts with the `-w` flag:
 
 ```bash
-npm install                  # install both workspaces at once
+# client/ + server/ (current production frontend + backend)
+npm install                  # install client + server workspaces at once
 npm run seed   -w server     # (re)initialize DB + demo data  — run before first dev
 npm run dev    -w server     # backend dev (node --watch), port 3001
-npm run dev    -w client     # frontend dev (Vite), port 5173 — separate terminal
+npm run dev    -w client     # client/ frontend dev (Vite), port 5173 — separate terminal
 npm run build  -w client     # production build → client/dist/
 npm run start  -w server     # production server (also serves client/dist)
+
+# client-vue/ (new frontend, in migration — run from client-vue/)
+pnpm install                 # install the pnpm monorepo
+pnpm dev:antd                # dev server, port 5666, proxies /api → :3001
+pnpm build:antd              # build → apps/web-antd/dist/  (set VITE_GLOB_API_URL=/api in .env.production first)
 ```
 
 There is **no test runner and no linter** configured — do not invent `npm test` / `npm run lint` commands.
@@ -53,11 +59,19 @@ Route conventions (see `routes/policies.js`, `routes/users.js`):
 - **Auth is not enforced.** There is a `POST /api/users/login` (SHA-256 hash, returns the user object) but no session/JWT/middleware — all `/api` routes are open. The client just stores a user in `localStorage` under `car_insurance_current_user` and defaults to `admin`. When you need "the current user" server-side, note that route handlers currently hardcode `operator: '管理员'` rather than reading the real caller — match the surrounding code unless asked to fix this.
 - Passwords are unsalted SHA-256 of `'123456'` in demo data (see `seed.js`, `users.js`).
 
-### Frontend (React 18 + Vite + Ant Design ProComponents, ESM)
+### Frontend — two coexisting stacks (React → Vue-Vben migration)
+
+**`client/` (React 18 + Vite + Ant Design ProComponents) — current production frontend.**
 - `client/src/app.jsx` is the shell: `ProLayout` with the menu (`menuRoutes`) and all `<Route>`s, plus theme switching (light/dark/compact, stored in `localStorage` key `car_insurance_theme_mode`) and a change-password modal.
 - All HTTP goes through `client/src/services/api.js` — an axios instance with `baseURL: '/api'`. Add new endpoints here as exported functions. In dev, Vite proxies `/api` → `http://localhost:3001` (`vite.config.js`).
-- Pages live in `client/src/pages/<Name>/index.jsx`. List pages use `ProTable`; forms use `ModalForm` + `ProForm*` (see `docs/development-guide.md` for the canonical snippet). Status tag colors by convention: `green`=正常, `red`=异常, `blue`=进行中, `default`=已结束.
-- `PolicyPage` is mounted on **two** routes with a `mode` prop — `/policies` (`mode="create"`) and `/policies/query` (`mode="query"`) — same component, different behavior; the sidebar even renders a separate `查` button for the query route. Keep both modes working when editing it.
+- Pages live in `client/src/pages/<Name>/index.jsx`. List pages use `ProTable`; forms use `ModalForm` + `ProForm*` (see `docs/development-guide.md`). Status tag colors: `green`=正常, `red`=异常, `blue`=进行中, `default`=已结束.
+- `PolicyPage` is mounted on **two** routes with a `mode` prop — `/policies` (`mode="create"`) and `/policies/query` (`mode="query"`) — same component, different behavior; the sidebar renders a separate `查` button for the query route. Keep both modes working when editing it.
+
+**`client-vue/` (Vue 3 + Vben Admin v5) — new frontend, ~85% migrated, in progress.**
+- Business code under `client-vue/apps/web-antd/src/`: `views/<name>/` (pages), `api/<name>.ts` (services via `api/request.ts`), routes in `router/routes/modules/driveease.ts`.
+- Dev proxies `/api` → `http://localhost:3001` (`apps/web-antd/vite.config.ts`); Vben's built-in mock is disabled (`VITE_NITRO_MOCK=false`).
+- Login reuses `POST /api/users/login` (see `api/core/auth.ts`) — so that endpoint is **not** dead code; do not remove it.
+- **Policy page (create/query) is NOT yet migrated** (ComingSoon placeholder, no `api/policy.ts`) — the main gap. `.env.production` still points at Vben's public mock (fix to `/api` before building). `server/src/app.js` production static hosting still points at `client/dist` — do **not** delete `client/` until client-vue is cut over.
 
 ## Adding a feature (canonical flow)
 
@@ -66,10 +80,15 @@ Route conventions (see `routes/policies.js`, `routes/users.js`):
 2. Register it in `server/src/app.js`: `app.use('/api/<thing>', thingRoutes)`.
 3. If it needs persistence, add the table in `initDB()` (`database.js`); for new columns use `ensureColumn`.
 
-**New frontend page:**
+**New frontend page (client/, React):**
 1. Create `client/src/pages/<Name>/index.jsx`.
 2. Add API functions in `client/src/services/api.js`.
 3. Add the route + an entry to `menuRoutes` in `client/src/app.jsx`.
+
+**New frontend page (client-vue/, Vue-Vben):**
+1. Create components under `client-vue/apps/web-antd/src/views/<name>/`.
+2. Add API functions in `client-vue/apps/web-antd/src/api/<name>.ts` (map `{data,total,page,pageSize}` → Vben/vxe-grid shape; see `api/customer.ts`).
+3. Add the route in `client-vue/apps/web-antd/src/router/routes/modules/driveease.ts`.
 
 ## Docs
 
