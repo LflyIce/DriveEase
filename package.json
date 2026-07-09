@@ -2,5 +2,10 @@
   "name": "car-insurance",
   "version": "1.0.0",
   "private": true,
-  "workspaces": ["client", "server"]
+  "workspaces": [
+    "server"
+  ],
+  "dependencies": {
+    "tencentcloud-sdk-nodejs-ocr": "^4.1.264"
+  }
 }

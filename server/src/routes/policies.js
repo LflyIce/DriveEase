@@ -9,8 +9,13 @@ router.get('/', (req, res) => {
     const conditions = [];
     const params = [];
     if (keyword) {
-      conditions.push('p.policy_number LIKE ?');
-      params.push(`%${keyword}%`);
+      // 按客户统计：keyword 同时匹配保单号 / 客户名 / 客户电话 / 车牌号
+      // （列表 SQL 已 LEFT JOIN customer c / vehicle v）
+      conditions.push(
+        '(p.policy_number LIKE ? OR c.name LIKE ? OR c.phone LIKE ? OR v.plate_number LIKE ?)'
+      );
+      const kw = `%${keyword}%`;
+      params.push(kw, kw, kw, kw);
     }
     if (status) {
       conditions.push('p.status = ?');
@@ -219,6 +224,202 @@ router.delete('/:id', (req, res) => {
     res.json({ message: '删除成功' });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// 录入页聚合接口：一次性 upsert 客户(按手机号) + 车辆(按车牌) + 新建保单
+router.post('/full', (req, res) => {
+  try {
+    const b = req.body || {};
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+    // 1. upsert customer（按 phone 复用，避免重复客户）
+    let customerId;
+    if (b.phone) {
+      const exist = get('SELECT id FROM customer WHERE phone = ?', [b.phone]);
+      if (exist) {
+        run(
+          `UPDATE customer SET name=?, id_number=?, birthday=?, customer_type=?, business_attribution=?, business_area=?, address=?, follow_status=?, ssn_front=?, business_license=?, ssn_back=?, id_authority=?, id_valid_date=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+          [
+            b.name,
+            b.id_number ?? null,
+            b.birthday ?? null,
+            b.customer_type ?? null,
+            b.business_attribution ?? null,
+            b.business_area ?? null,
+            b.address ?? null,
+            b.follow_status ? JSON.stringify(b.follow_status) : null,
+            b.ssn_front ?? null,
+            b.business_license ?? null,
+            b.ssn_back ?? null,
+            b.id_authority ?? null,
+            b.id_valid_date ?? null,
+            exist.id,
+          ],
+        );
+        customerId = exist.id;
+      }
+    }
+    if (!customerId) {
+      const r = run(
+        `INSERT INTO customer (name, phone, id_number, birthday, customer_type, business_attribution, business_area, address, follow_status, ssn_front, business_license, ssn_back, id_authority, id_valid_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          b.name,
+          b.phone,
+          b.id_number ?? null,
+          b.birthday ?? null,
+          b.customer_type ?? null,
+          b.business_attribution ?? null,
+          b.business_area ?? null,
+          b.address ?? null,
+          b.follow_status ? JSON.stringify(b.follow_status) : null,
+          b.ssn_front ?? null,
+          b.business_license ?? null,
+          b.ssn_back ?? null,
+          b.id_authority ?? null,
+          b.id_valid_date ?? null,
+        ],
+      );
+      customerId = r.lastInsertRowid;
+    }
+
+    // 2. upsert vehicle（按 plate_number 复用；旧 brand/model 字段用 brand_model 兜底）
+    let vehicleId;
+    const brandModel = b.brand_model ?? '';
+    if (b.plate_number) {
+      const exist = get('SELECT id FROM vehicle WHERE plate_number = ?', [
+        b.plate_number,
+      ]);
+      if (exist) {
+        run(
+          `UPDATE vehicle SET brand=?, model=?, vin=?, engine_number=?, brand_model=?, energy_type=?, vehicle_type=?, register_date=?, certificate_date=?, next_inspection_date=?, transfer_flag=?, seats=?, load_capacity=?, driving_front=?, driving_back=?, customer_id=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+          [
+            brandModel,
+            brandModel,
+            b.vin ?? null,
+            b.engine_number ?? null,
+            brandModel,
+            b.energy_type ?? null,
+            b.vehicle_type ?? null,
+            b.register_date ?? null,
+            b.certificate_date ?? null,
+            b.next_inspection_date ?? null,
+            b.transfer_flag ?? null,
+            b.seats ?? null,
+            b.load_capacity ?? null,
+            b.driving_front ?? null,
+            b.driving_back ?? null,
+            customerId,
+            exist.id,
+          ],
+        );
+        vehicleId = exist.id;
+      }
+    }
+    if (!vehicleId) {
+      if (!b.plate_number) return res.status(400).json({ error: '车牌号为必填' });
+      const r = run(
+        `INSERT INTO vehicle (plate_number, brand, model, vin, engine_number, customer_id, brand_model, energy_type, vehicle_type, register_date, certificate_date, next_inspection_date, transfer_flag, seats, load_capacity, driving_front, driving_back) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          b.plate_number,
+          brandModel,
+          brandModel,
+          b.vin ?? null,
+          b.engine_number ?? null,
+          customerId,
+          brandModel,
+          b.energy_type ?? null,
+          b.vehicle_type ?? null,
+          b.register_date ?? null,
+          b.certificate_date ?? null,
+          b.next_inspection_date ?? null,
+          b.transfer_flag ?? null,
+          b.seats ?? null,
+          b.load_capacity ?? null,
+          b.driving_front ?? null,
+          b.driving_back ?? null,
+        ],
+      );
+      vehicleId = r.lastInsertRowid;
+    }
+
+    // 3. 新建保单（policy_number 自动生成；推导 insurance_type；日期双写）
+    const policyNumber = `POL-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const hasTraffic = Number(b.traffic_premium) > 0;
+    const hasCommercial = Number(b.commercial_premium) > 0;
+    const insuranceType =
+      hasTraffic && hasCommercial
+        ? '综合'
+        : hasTraffic
+          ? '交强险'
+          : hasCommercial
+            ? '商业险'
+            : '综合';
+    const premium = Number(b.premium) || 0;
+    const sumInsured = Number(b.sum_insured) || premium;
+    const policyDate = b.policy_date || today;
+    const expiryDate =
+      b.expiry_date ||
+      `${now.getFullYear() + 1}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+    const pr = run(
+      `INSERT INTO policy (
+        policy_number, customer_id, vehicle_id, insurance_type, premium, sum_insured,
+        start_date, end_date, status, policy_date, effective_date, expiry_date,
+        insurance_company, sales_person, remark,
+        traffic_premium, travel_tax, commercial_premium, surcharge_premium, surcharge_premium2,
+        commission, expenses, traffic_rate, traffic_charge, commercial_rate, commercial_charge,
+        surcharge_rate, surcharge_charge, surcharge_rate2, surcharge_charge2, total_charge,
+        quotation, policy_file
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [
+        policyNumber,
+        customerId,
+        vehicleId,
+        insuranceType,
+        premium,
+        sumInsured,
+        policyDate,
+        expiryDate,
+        '待生效',
+        policyDate,
+        policyDate,
+        expiryDate,
+        b.insurance_company ?? null,
+        b.sales_person ?? null,
+        b.remark ?? null,
+        b.traffic_premium ?? null,
+        b.travel_tax ?? null,
+        b.commercial_premium ?? null,
+        b.surcharge_premium ?? null,
+        b.surcharge_premium2 ?? null,
+        b.commission ?? null,
+        b.expenses ?? null,
+        b.traffic_rate ?? null,
+        b.traffic_charge ?? null,
+        b.commercial_rate ?? null,
+        b.commercial_charge ?? null,
+        b.surcharge_rate ?? null,
+        b.surcharge_charge ?? null,
+        b.surcharge_rate2 ?? null,
+        b.surcharge_charge2 ?? null,
+        b.total_charge ?? null,
+        b.quotation ?? null,
+        b.policy_file ?? null,
+      ],
+    );
+
+    log({ operator: '管理员', action: '新增保单', target: policyNumber });
+    res.status(201).json({
+      customer_id: customerId,
+      vehicle_id: vehicleId,
+      policy_id: pr.lastInsertRowid,
+      policy_number: policyNumber,
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 

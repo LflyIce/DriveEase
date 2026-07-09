@@ -1,3 +1,4 @@
+import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -14,11 +15,16 @@ import logRoutes from './routes/logs.js';
 import commercialInsuranceTypeRoutes from './routes/commercialInsuranceTypes.js';
 import compulsoryInsuranceTypeRoutes from './routes/compulsoryInsuranceTypes.js';
 import insuranceCompanyRoutes from './routes/insuranceCompanies.js';
+import uploadRoutes from './routes/upload.js';
+import ocrRoutes from './routes/ocr.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const clientDist = path.resolve(__dirname, '..', '..', 'client', 'dist');
+// 读取 server/.env（COS 凭证等，.gitignore 已忽略 .env）
+dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
+// 生产前端已切换到 client-vue（Vue-Vben），构建产物在 client-vue/apps/web-antd/dist
+const clientDist = path.resolve(__dirname, '..', '..', 'client-vue', 'apps', 'web-antd', 'dist');
 
 app.use(cors());
 app.use(express.json());
@@ -33,6 +39,8 @@ app.use('/api/logs', logRoutes);
 app.use('/api/commercial-insurance-types', commercialInsuranceTypeRoutes);
 app.use('/api/compulsory-insurance-types', compulsoryInsuranceTypeRoutes);
 app.use('/api/insurance-companies', insuranceCompanyRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/ocr', ocrRoutes);
 app.use(express.static(clientDist));
 app.get('*', (req, res) => {
   res.sendFile(path.join(clientDist, 'index.html'));

@@ -2,10 +2,8 @@ import type { RouteRecordRaw } from 'vue-router';
 
 /**
  * DriveEase 业务菜单（对应原 React 端的 10 个页面）。
- * 保单录入/查询暂保留 coming-soon 占位（待单独实现 PolicyPage 双模式）。
+ * 保单查询（列表 + 详情抽屉 + 激活/退保/删除）、保单录入（客户+车辆+保费一体表单）均已实现。
  */
-const ComingSoon = () => import('#/views/_core/fallback/coming-soon.vue');
-
 const routes: RouteRecordRaw[] = [
   {
     path: '/dashboard',
@@ -28,20 +26,20 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/policies',
     name: 'Policy',
-    redirect: '/policies/create',
+    redirect: '/policies/query',
     meta: { title: '保单管理', icon: 'lucide:file-text', order: 4 },
     children: [
       {
-        path: 'create',
-        name: 'PolicyCreate',
-        component: ComingSoon,
-        meta: { title: '保单录入' },
-      },
-      {
         path: 'query',
         name: 'PolicyQuery',
-        component: ComingSoon,
+        component: () => import('#/views/policy/index.vue'),
         meta: { title: '保单查询' },
+      },
+      {
+        path: 'create',
+        name: 'PolicyCreate',
+        component: () => import('#/views/policy/create.vue'),
+        meta: { title: '保单录入' },
       },
     ],
   },
