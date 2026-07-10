@@ -8,10 +8,10 @@ export namespace CustomerApi {
     name: string;
     phone: string;
     email?: null | string;
-    id_number?: null | string;
+    idNumber?: null | string;
     address?: null | string;
-    created_at?: string;
-    updated_at?: string;
+    createdAt?: string;
+    updatedAt?: string;
   }
 
   export interface PageResult {
@@ -24,7 +24,8 @@ export namespace CustomerApi {
 
 /**
  * 客户列表
- * 后端返回 { data, total, page, pageSize }；vxe-grid 全局 proxyConfig 期望 { items, total }，这里做一次映射。
+ * 后端返回统一外壳 { code, message, data:{ data, total, page, pageSize } }，响应拦截器已解包 data；
+ * vxe-grid 全局 proxyConfig 期望 { items, total }，这里做一次映射。
  */
 export async function getCustomerList(params: Recordable<any>) {
   const res = await requestClient.get<CustomerApi.PageResult>('/customers', {

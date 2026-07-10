@@ -48,12 +48,12 @@ export function useGridFormSchema(): VbenFormSchema[] {
 export function useColumns(): VxeTableGridColumns {
   return [
     { field: 'id', title: 'ID', width: 70 },
-    { field: 'policy_number', title: '保单号', width: 170 },
-    { field: 'customer_name', title: '投保人', width: 100 },
-    { field: 'customer_phone', title: '电话', width: 130 },
-    { field: 'plate_number', title: '车牌号', width: 110 },
-    { field: 'insurance_company', title: '保险公司', width: 130 },
-    { field: 'insurance_type', title: '险种', width: 90 },
+    { field: 'policyNumber', title: '保单号', width: 170 },
+    { field: 'customerName', title: '投保人', width: 100 },
+    { field: 'customerPhone', title: '电话', width: 130 },
+    { field: 'plateNumber', title: '车牌号', width: 110 },
+    { field: 'insuranceCompany', title: '保险公司', width: 130 },
+    { field: 'insuranceType', title: '险种', width: 90 },
     {
       align: 'right',
       field: 'premium',
@@ -63,13 +63,13 @@ export function useColumns(): VxeTableGridColumns {
     },
     {
       align: 'right',
-      field: 'sum_insured',
+      field: 'sumInsured',
       formatter: ({ cellValue }) => formatMoney(cellValue),
       title: '保额',
       width: 130,
     },
-    { field: 'effective_date', title: '起保日期', width: 120 },
-    { field: 'expiry_date', title: '到期日期', width: 120 },
+    { field: 'effectiveDate', title: '起保日期', width: 120 },
+    { field: 'expiryDate', title: '到期日期', width: 120 },
     {
       align: 'center',
       field: 'status',
@@ -92,9 +92,10 @@ export function useColumns(): VxeTableGridColumns {
  * 以下为录入页（/policies/create）表单 schema —— 按截图分组
  * 多列布局由 create.vue 的 wrapperClass:'grid-cols-2' 控制，
  * 单项跨整行用 formItemClass:'cols-span-full'
+ * 字段名（fieldName）与后端 CreatePolicyFullDto 的 camelCase 一一对应
  * ============================================================ */
 
-/** 客户跟进状态（多选，存 JSON 数组到 customer.follow_status） */
+/** 客户跟进状态（多选，存 JSON 数组到 customer.followStatus） */
 export const FOLLOW_STATUS_OPTIONS = [
   '已成交', '待追踪', '流失', '待续保', '脱保', '待核实', '询价中',
   '卖车', '已续保', '退保', '报废', '已询价', '待打款',
@@ -136,31 +137,31 @@ export function useCustomerSchema(): VbenFormSchema[] {
         options: CUSTOMER_TYPE_OPTIONS,
         placeholder: '请选择客户类型',
       },
-      fieldName: 'customer_type',
+      fieldName: 'customerType',
       label: '客户类型',
       rules: 'required',
     },
-    { component: 'Input', fieldName: 'id_number', label: '身份证/信用代码' },
-    { component: 'Input', fieldName: 'id_authority', label: '签发机关' },
-    { component: 'Input', fieldName: 'id_valid_date', label: '证件有效期' },
+    { component: 'Input', fieldName: 'idNumber', label: '身份证/信用代码' },
+    { component: 'Input', fieldName: 'idAuthority', label: '签发机关' },
+    { component: 'Input', fieldName: 'idValidDate', label: '证件有效期' },
     { component: 'Input', fieldName: 'phone', label: '手机号码' },
     { component: 'DatePicker', fieldName: 'birthday', label: '客户生日' },
     {
       component: 'RadioGroup',
       componentProps: { options: TRANSFER_OPTIONS },
       defaultValue: 'N',
-      fieldName: 'transfer_flag',
+      fieldName: 'transferFlag',
       label: '过户标识',
     },
     {
       component: 'CheckboxGroup',
       componentProps: { options: FOLLOW_STATUS_OPTIONS },
-      fieldName: 'follow_status',
+      fieldName: 'followStatus',
       formItemClass: 'cols-span-full',
       label: '状态',
     },
-    { component: 'Input', fieldName: 'business_attribution', label: '业务归属' },
-    { component: 'Input', fieldName: 'business_area', label: '业务归属地' },
+    { component: 'Input', fieldName: 'businessAttribution', label: '业务归属' },
+    { component: 'Input', fieldName: 'businessArea', label: '业务归属地' },
     {
       component: 'ApiSelect',
       componentProps: {
@@ -169,7 +170,7 @@ export function useCustomerSchema(): VbenFormSchema[] {
         placeholder: '请选择业务员',
         valueField: 'username',
       },
-      fieldName: 'sales_person',
+      fieldName: 'salesPerson',
       label: '业务员',
     },
     {
@@ -187,18 +188,18 @@ export function useVehicleSchema(): VbenFormSchema[] {
   return [
     {
       component: 'Input',
-      fieldName: 'plate_number',
+      fieldName: 'plateNumber',
       label: '车牌号',
       rules: 'required',
     },
     { component: 'Input', fieldName: 'vin', label: '车架号', rules: 'required' },
     {
       component: 'Input',
-      fieldName: 'engine_number',
+      fieldName: 'engineNumber',
       label: '发动机号',
       rules: 'required',
     },
-    { component: 'Input', fieldName: 'brand_model', label: '厂牌型号' },
+    { component: 'Input', fieldName: 'brandModel', label: '厂牌型号' },
     {
       component: 'RadioGroup',
       componentProps: {
@@ -206,7 +207,7 @@ export function useVehicleSchema(): VbenFormSchema[] {
         optionType: 'button',
         options: ENERGY_OPTIONS,
       },
-      fieldName: 'energy_type',
+      fieldName: 'energyType',
       label: '油电分类',
     },
     {
@@ -216,18 +217,18 @@ export function useVehicleSchema(): VbenFormSchema[] {
         placeholder: '请选择车辆种类',
         showSearch: true,
       },
-      fieldName: 'vehicle_type',
+      fieldName: 'vehicleType',
       label: '车辆种类',
     },
     {
       component: 'DatePicker',
-      fieldName: 'register_date',
+      fieldName: 'registerDate',
       label: '初登日期',
       rules: 'required',
     },
     {
       component: 'DatePicker',
-      fieldName: 'certificate_date',
+      fieldName: 'certificateDate',
       label: '发证日期',
       rules: 'required',
     },
@@ -241,10 +242,10 @@ export function useVehicleSchema(): VbenFormSchema[] {
     {
       component: 'InputNumber',
       componentProps: { min: 0, style: 'width:100%' },
-      fieldName: 'load_capacity',
+      fieldName: 'loadCapacity',
       label: '核定载质量',
     },
-    { component: 'DatePicker', fieldName: 'next_inspection_date', label: '下次年审' },
+    { component: 'DatePicker', fieldName: 'nextInspectionDate', label: '下次年审' },
   ];
 }
 
@@ -266,26 +267,26 @@ export function usePremiumSchema(): VbenFormSchema[] {
         placeholder: '请选择保险公司',
         valueField: 'name',
       },
-      fieldName: 'insurance_company',
+      fieldName: 'insuranceCompany',
       label: '保险公司',
     },
     {
       component: 'DatePicker',
-      fieldName: 'policy_date',
+      fieldName: 'policyDate',
       label: '投保日期',
       rules: 'required',
     },
     {
       component: 'DatePicker',
-      fieldName: 'expiry_date',
+      fieldName: 'expiryDate',
       label: '到期日期',
       rules: 'required',
     },
-    num('traffic_premium', '交强险保费'),
-    num('travel_tax', '车船税'),
-    num('commercial_premium', '商业险保费'),
-    num('surcharge_premium', '非车保费'),
-    num('surcharge_premium2', '非车2保费'),
+    num('trafficPremium', '交强险保费'),
+    num('travelTax', '车船税'),
+    num('commercialPremium', '商业险保费'),
+    num('surchargePremium', '非车保费'),
+    num('surchargePremium2', '非车2保费'),
     num('premium', '合计保费'),
   ];
 }
@@ -301,15 +302,15 @@ export function useChargeSchema(): VbenFormSchema[] {
   return [
     num('commission', '手续费'),
     num('expenses', '支出'),
-    num('traffic_rate', '交强费率'),
-    num('traffic_charge', '交强手续费'),
-    num('commercial_rate', '商业费率'),
-    num('commercial_charge', '商业手续费'),
-    num('surcharge_rate', '非车费率'),
-    num('surcharge_charge', '非车手续费'),
-    num('surcharge_rate2', '非车2费率'),
-    num('surcharge_charge2', '非车2手续费'),
-    num('total_charge', '手续费总计'),
+    num('trafficRate', '交强费率'),
+    num('trafficCharge', '交强手续费'),
+    num('commercialRate', '商业费率'),
+    num('commercialCharge', '商业手续费'),
+    num('surchargeRate', '非车费率'),
+    num('surchargeCharge', '非车手续费'),
+    num('surchargeRate2', '非车2费率'),
+    num('surchargeCharge2', '非车2手续费'),
+    num('totalCharge', '手续费总计'),
   ];
 }
 

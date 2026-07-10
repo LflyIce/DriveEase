@@ -5,19 +5,19 @@ import { requestClient } from '#/api/request';
 export namespace RenewalApi {
   export interface Renewal {
     id: number;
-    old_policy_id: number;
-    new_policy_id?: null | number;
-    remind_date: string;
+    oldPolicyId: number;
+    newPolicyId?: null | number;
+    remindDate: string;
     status: '已提醒' | '已过期' | '已续保' | '待提醒';
     note?: null | string;
-    created_at?: string;
+    createdAt?: string;
     oldPolicy?: {
       id: number;
-      policy_number: string;
+      policyNumber: string;
       customer?: { name?: string; phone?: string } | null;
-      vehicle?: { plate_number?: string; brand?: string; model?: string } | null;
+      vehicle?: { plateNumber?: string; brand?: string; model?: string } | null;
     } | null;
-    newPolicy?: { id: number; policy_number: string } | null;
+    newPolicy?: { id: number; policyNumber: string } | null;
   }
   export interface PageResult {
     data: Renewal[];
@@ -27,7 +27,7 @@ export namespace RenewalApi {
   }
   export interface RenewResult {
     renewalRecord: Renewal;
-    newPolicy: { id: number; policy_number: string };
+    newPolicy: { id: number; policyNumber: string };
   }
 }
 
@@ -39,10 +39,10 @@ export async function getRenewalList(params: Recordable<any>) {
   return {
     items: res.data.map((r) => ({
       ...r,
-      customer_name: r.oldPolicy?.customer?.name,
-      new_policy_number: r.newPolicy?.policy_number,
-      old_policy_number: r.oldPolicy?.policy_number,
-      plate_number: r.oldPolicy?.vehicle?.plate_number,
+      customerName: r.oldPolicy?.customer?.name,
+      newPolicyNumber: r.newPolicy?.policyNumber,
+      oldPolicyNumber: r.oldPolicy?.policyNumber,
+      plateNumber: r.oldPolicy?.vehicle?.plateNumber,
     })),
     total: res.total,
   };

@@ -6,8 +6,8 @@ export namespace CompulsoryInsuranceApi {
   export interface Type {
     id?: number;
     name: string;
-    created_at?: string;
-    updated_at?: string;
+    createdAt?: string;
+    updatedAt?: string;
   }
   export interface PageResult {
     data: Type[];

@@ -7,7 +7,7 @@ export function useFormSchema(): VbenFormSchema[] {
   return [
     {
       component: 'Input',
-      fieldName: 'plate_number',
+      fieldName: 'plateNumber',
       label: '车牌号',
       rules: 'required',
     },
@@ -20,7 +20,7 @@ export function useFormSchema(): VbenFormSchema[] {
       label: '年份',
     },
     { component: 'Input', fieldName: 'vin', label: 'VIN' },
-    { component: 'Input', fieldName: 'engine_number', label: '发动机号' },
+    { component: 'Input', fieldName: 'engineNumber', label: '发动机号' },
     {
       component: 'ApiSelect',
       componentProps: {
@@ -30,7 +30,7 @@ export function useFormSchema(): VbenFormSchema[] {
         placeholder: '选择客户',
         valueField: 'id',
       },
-      fieldName: 'customer_id',
+      fieldName: 'customerId',
       label: '所属客户',
       rules: 'required',
     },
@@ -51,12 +51,12 @@ export function useGridFormSchema(): VbenFormSchema[] {
 export function useColumns(): VxeTableGridColumns {
   return [
     { field: 'id', title: 'ID', width: 70 },
-    { field: 'plate_number', title: '车牌号', width: 120 },
+    { field: 'plateNumber', title: '车牌号', width: 120 },
     { field: 'brand', title: '品牌', width: 110 },
     { field: 'model', title: '型号', width: 120 },
     { field: 'year', title: '年份', width: 80 },
     { field: 'vin', title: 'VIN', minWidth: 180 },
-    { field: 'customer_name', title: '所属客户', width: 120 },
+    { field: 'customerName', title: '所属客户', width: 120 },
     {
       align: 'center',
       field: 'operation',

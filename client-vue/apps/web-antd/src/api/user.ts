@@ -11,8 +11,8 @@ export namespace UserApi {
     phone?: null | string;
     role: '普通员工' | '管理员';
     status: '禁用' | '启用';
-    created_at?: string;
-    updated_at?: string;
+    createdAt?: string;
+    updatedAt?: string;
   }
   export interface PageResult {
     data: User[];

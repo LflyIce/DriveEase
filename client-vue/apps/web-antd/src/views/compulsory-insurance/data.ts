@@ -15,7 +15,7 @@ export function useColumns(): VxeTableGridColumns {
   return [
     { field: 'id', title: 'ID', width: 70 },
     { field: 'name', title: '险种名称', minWidth: 200 },
-    { field: 'created_at', title: '创建时间', width: 170 },
+    { field: 'createdAt', title: '创建时间', width: 170 },
     {
       align: 'center',
       field: 'operation',

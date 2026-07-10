@@ -61,28 +61,28 @@ defineExpose({ show });
         title="基础信息"
       >
         <DescriptionsItem label="保单号">
-          {{ detail.policy_number }}
+          {{ detail.policyNumber }}
         </DescriptionsItem>
         <DescriptionsItem label="状态">
           <Tag :color="STATUS_COLOR[detail.status]">{{ detail.status }}</Tag>
         </DescriptionsItem>
         <DescriptionsItem label="险种">
-          {{ detail.insurance_type }}
+          {{ detail.insuranceType }}
         </DescriptionsItem>
         <DescriptionsItem label="保单日期">
-          {{ detail.policy_date || '-' }}
+          {{ detail.policyDate || '-' }}
         </DescriptionsItem>
         <DescriptionsItem label="起保日期">
-          {{ detail.effective_date || detail.start_date || '-' }}
+          {{ detail.effectiveDate || detail.startDate || '-' }}
         </DescriptionsItem>
         <DescriptionsItem label="到期日期">
-          {{ detail.expiry_date || detail.end_date || '-' }}
+          {{ detail.expiryDate || detail.endDate || '-' }}
         </DescriptionsItem>
         <DescriptionsItem label="保费">
           {{ formatMoney(detail.premium) }}
         </DescriptionsItem>
         <DescriptionsItem label="保额">
-          {{ formatMoney(detail.sum_insured) }}
+          {{ formatMoney(detail.sumInsured) }}
         </DescriptionsItem>
       </Descriptions>
 
@@ -101,7 +101,7 @@ defineExpose({ show });
           {{ detail.customer.phone }}
         </DescriptionsItem>
         <DescriptionsItem label="证件号">
-          {{ detail.customer.id_number || '-' }}
+          {{ detail.customer.idNumber || '-' }}
         </DescriptionsItem>
         <DescriptionsItem label="邮箱">
           {{ detail.customer.email || '-' }}
@@ -117,7 +117,7 @@ defineExpose({ show });
         title="被保车辆"
       >
         <DescriptionsItem label="车牌号">
-          {{ detail.vehicle.plate_number }}
+          {{ detail.vehicle.plateNumber }}
         </DescriptionsItem>
         <DescriptionsItem label="品牌型号">
           {{ detail.vehicle.brand }} {{ detail.vehicle.model }}
@@ -139,19 +139,19 @@ defineExpose({ show });
         title="保险公司 / 其他"
       >
         <DescriptionsItem label="保险公司">
-          {{ detail.insurance_company || '-' }}
+          {{ detail.insuranceCompany || '-' }}
         </DescriptionsItem>
         <DescriptionsItem label="联系人">
-          {{ detail.contact_person || '-' }}
+          {{ detail.contactPerson || '-' }}
         </DescriptionsItem>
         <DescriptionsItem label="联系电话">
-          {{ detail.contact_phone || '-' }}
+          {{ detail.contactPhone || '-' }}
         </DescriptionsItem>
         <DescriptionsItem label="销售人员">
-          {{ detail.sales_person || '-' }}
+          {{ detail.salesPerson || '-' }}
         </DescriptionsItem>
         <DescriptionsItem :span="2" label="开单时间">
-          {{ detail.issue_time || '-' }}
+          {{ detail.issueTime || '-' }}
         </DescriptionsItem>
         <DescriptionsItem :span="2" label="备注">
           {{ detail.remark || '-' }}

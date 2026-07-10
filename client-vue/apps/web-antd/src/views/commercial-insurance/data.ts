@@ -20,7 +20,7 @@ export function useFormSchema(): VbenFormSchema[] {
       component: 'InputNumber',
       componentProps: { min: 0, style: 'width:100%' },
       defaultValue: 0,
-      fieldName: 'sort_order',
+      fieldName: 'sortOrder',
       label: '排序',
     },
     { component: 'Textarea', fieldName: 'remark', label: '备注' },
@@ -44,7 +44,7 @@ export function useColumns(): VxeTableGridColumns {
     { field: 'id', title: 'ID', width: 70 },
     { field: 'name', title: '险种名称', minWidth: 160 },
     { field: 'status', title: '状态', width: 90 },
-    { field: 'sort_order', title: '排序', width: 80 },
+    { field: 'sortOrder', title: '排序', width: 80 },
     { field: 'remark', title: '备注', minWidth: 160 },
     {
       align: 'center',

@@ -5,16 +5,16 @@ import { requestClient } from '#/api/request';
 export namespace VehicleApi {
   export interface Vehicle {
     id?: number;
-    plate_number: string;
+    plateNumber: string;
     brand: string;
     model: string;
     year?: null | number;
     vin?: null | string;
-    engine_number?: null | string;
-    customer_id: number;
+    engineNumber?: null | string;
+    customerId: number;
     customer?: { id: number; name: string; phone: string } | null;
-    created_at?: string;
-    updated_at?: string;
+    createdAt?: string;
+    updatedAt?: string;
   }
   export interface PageResult {
     data: Vehicle[];
@@ -28,12 +28,12 @@ export async function getVehicleList(params: Recordable<any>) {
   const res = await requestClient.get<VehicleApi.PageResult>('/vehicles', {
     params,
   });
-  // 后端返回嵌套 customer，这里拍平出 customer_name 方便表格展示
+  // 后端返回嵌套 customer，这里拍平出 customerName 方便表格展示
   return {
     items: res.data.map((v) => ({
       ...v,
-      customer_name: v.customer?.name,
-      customer_phone: v.customer?.phone,
+      customerName: v.customer?.name,
+      customerPhone: v.customer?.phone,
     })),
     total: res.total,
   };

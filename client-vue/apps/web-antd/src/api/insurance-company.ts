@@ -6,10 +6,10 @@ export namespace InsuranceCompanyApi {
   export interface Company {
     id?: number;
     name: string;
-    contact_person?: null | string;
-    contact_phone?: null | string;
-    created_at?: string;
-    updated_at?: string;
+    contactPerson?: null | string;
+    contactPhone?: null | string;
+    createdAt?: string;
+    updatedAt?: string;
   }
   export interface PageResult {
     data: Company[];

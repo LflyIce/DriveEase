@@ -7,10 +7,10 @@ export namespace CommercialInsuranceApi {
     id?: number;
     name: string;
     status?: '禁用' | '启用';
-    sort_order?: number;
+    sortOrder?: number;
     remark?: null | string;
-    created_at?: string;
-    updated_at?: string;
+    createdAt?: string;
+    updatedAt?: string;
   }
   export interface PageResult {
     data: Type[];

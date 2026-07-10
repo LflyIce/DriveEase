@@ -10,7 +10,7 @@ export namespace LogApi {
     target?: string;
     detail?: string;
     result: string;
-    created_at: string;
+    createdAt: string;
   }
   export interface PageResult {
     data: Log[];

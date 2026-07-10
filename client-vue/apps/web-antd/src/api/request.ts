@@ -76,7 +76,7 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
     defaultResponseInterceptor({
       codeField: 'code',
       dataField: 'data',
-      successCode: 0,
+      successCode: 200,
     }),
   );
 
@@ -106,10 +106,11 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
   return client;
 }
 
+// DriveEase 后端返回统一外壳 {code,message,data,timestamp}。
+// 注意：RequestClient 默认 responseReturn:'raw'（返回完整 axios 响应，不解包），
+// 必须显式设为 'data'，才会走 defaultResponseInterceptor 校验 code===200 并返回 responseData.data。
 export const requestClient = createRequestClient(apiURL, {
-  // DriveEase 后端返回裸对象 / {data,total,page,pageSize}，没有 {code,data} 外壳，
-  // 用 'body' 让拦截器直接把响应体透传给调用方（2xx-3xx）。
-  responseReturn: 'body',
+  responseReturn: 'data',
 });
 
 export const baseRequestClient = new RequestClient({ baseURL: apiURL });

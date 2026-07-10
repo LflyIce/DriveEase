@@ -25,7 +25,7 @@ const [Grid] = useVbenVxeGrid({
       { field: 'target', title: '对象', width: 160 },
       { field: 'detail', title: '详情', minWidth: 220 },
       { field: 'result', title: '结果', width: 90 },
-      { field: 'created_at', title: '时间', width: 170 },
+      { field: 'createdAt', title: '时间', width: 170 },
     ],
     height: 'auto',
     proxyConfig: {

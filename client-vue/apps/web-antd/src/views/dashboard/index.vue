@@ -89,7 +89,7 @@ const renewalColumns = [
   {
     title: '原保单号',
     key: 'policy',
-    customRender: ({ record }) => record.oldPolicy?.policy_number ?? '—',
+    customRender: ({ record }) => record.oldPolicy?.policyNumber ?? '—',
   },
   {
     title: '客户',
@@ -99,9 +99,9 @@ const renewalColumns = [
   {
     title: '车牌',
     key: 'plate',
-    customRender: ({ record }) => record.oldPolicy?.vehicle?.plate_number ?? '—',
+    customRender: ({ record }) => record.oldPolicy?.vehicle?.plateNumber ?? '—',
   },
-  { dataIndex: 'remind_date', key: 'remind', title: '提醒日期' },
+  { dataIndex: 'remindDate', key: 'remind', title: '提醒日期' },
   {
     key: 'status',
     title: '状态',

@@ -1,5 +1,7 @@
 # DriveEase 项目部署和启动文档
 
+> ⚠️ **本文档已过时**（描述的是 React `client/` + Express 时代）。当前架构为 **NestJS + TypeORM（默认 sql.js）+ 单前端 client-vue**。最新部署说明见 [deployment.md](./deployment.md)，数据库迁移到 PostgreSQL 见 [migrate-to-postgresql.md](./migrate-to-postgresql.md)。
+
 ## 1. 项目结构
 
 ```text

@@ -39,10 +39,10 @@ const [Grid, gridApi] = useVbenVxeGrid({
   gridOptions: {
     columns: [
       { field: 'id', title: 'ID', width: 70 },
-      { field: 'old_policy_number', title: '原保单号', width: 150 },
-      { field: 'customer_name', title: '客户', width: 100 },
-      { field: 'plate_number', title: '车牌', width: 100 },
-      { field: 'remind_date', title: '提醒日期', width: 120 },
+      { field: 'oldPolicyNumber', title: '原保单号', width: 150 },
+      { field: 'customerName', title: '客户', width: 100 },
+      { field: 'plateNumber', title: '车牌', width: 100 },
+      { field: 'remindDate', title: '提醒日期', width: 120 },
       {
         align: 'center',
         field: 'status',
@@ -50,7 +50,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
         title: '状态',
         width: 100,
       },
-      { field: 'new_policy_number', title: '新保单号', width: 150 },
+      { field: 'newPolicyNumber', title: '新保单号', width: 150 },
       { field: 'note', title: '备注', minWidth: 180 },
       {
         align: 'center',
@@ -79,7 +79,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
 
 function onRenew(row: RenewalApi.Renewal) {
   renewRenewal(row.id).then((res) => {
-    message.success(`续保成功，新保单：${res?.newPolicy?.policy_number ?? ''}`);
+    message.success(`续保成功，新保单：${res?.newPolicy?.policyNumber ?? ''}`);
     gridApi.query();
   });
 }

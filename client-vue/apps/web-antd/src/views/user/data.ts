@@ -74,7 +74,7 @@ export function useColumns(): VxeTableGridColumns {
     { field: 'status', title: '状态', width: 90 },
     { field: 'email', title: '邮箱', minWidth: 200 },
     { field: 'phone', title: '手机号', width: 140 },
-    { field: 'created_at', title: '创建时间', width: 170 },
+    { field: 'createdAt', title: '创建时间', width: 170 },
     {
       align: 'center',
       field: 'operation',

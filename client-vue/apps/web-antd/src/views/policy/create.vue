@@ -57,35 +57,37 @@ const merged = customerApi
   .merge(chargeApi)
   .merge(remarkApi);
 
+// 字段名与后端 CreatePolicyFullDto 的 camelCase 一一对应
 const DATE_FIELDS = [
   'birthday',
-  'register_date',
-  'certificate_date',
-  'next_inspection_date',
-  'policy_date',
-  'expiry_date',
+  'registerDate',
+  'certificateDate',
+  'nextInspectionDate',
+  'policyDate',
+  'expiryDate',
 ];
 
 // —— 材料上传（COS）+ OCR 自动填表 ——
+// 这些键即提交给 /policies/full 的文件 URL 字段（camelCase，对齐后端 DTO）
 const files = reactive<Record<string, string>>({
-  driving_front: '',
-  driving_back: '',
-  ssn_front: '',
-  ssn_back: '',
-  business_license: '',
+  drivingFront: '',
+  drivingBack: '',
+  ssnFront: '',
+  ssnBack: '',
+  businessLicense: '',
   quotation: '',
-  policy_file: '',
+  policyFile: '',
 });
 
 // Upload 受控 fileList：达到 1 个后隐藏上传按钮（每个字段只能传一张）
 const fileLists = reactive<Record<string, any[]>>({
-  driving_front: [],
-  driving_back: [],
-  ssn_front: [],
-  ssn_back: [],
-  business_license: [],
+  drivingFront: [],
+  drivingBack: [],
+  ssnFront: [],
+  ssnBack: [],
+  businessLicense: [],
   quotation: [],
-  policy_file: [],
+  policyFile: [],
 });
 
 function makeCustomRequest(key: string) {
@@ -108,22 +110,22 @@ async function uploadDrivingFront(opt: any) {
     const res = await requestClient.upload<{ url: string }>('/upload', {
       file: opt.file as File,
     });
-    files.driving_front = res.url;
+    files.drivingFront = res.url;
     opt.onSuccess?.(res);
     const info = await requestClient.get<any>('/ocr/vehicle-license', {
       params: { imageUrl: res.url, side: 'front' },
     });
     vehicleApi.setValues({
-      plate_number: info.plate_number,
+      plateNumber: info.plateNumber,
       vin: info.vin,
-      engine_number: info.engine_number,
-      brand_model: info.brand_model,
-      vehicle_type: info.vehicle_type,
-      register_date: info.register_date ? dayjs(info.register_date) : undefined,
-      certificate_date: info.certificate_date ? dayjs(info.certificate_date) : undefined,
+      engineNumber: info.engineNumber,
+      brandModel: info.brandModel,
+      vehicleType: info.vehicleType,
+      registerDate: info.registerDate ? dayjs(info.registerDate) : undefined,
+      certificateDate: info.certificateDate ? dayjs(info.certificateDate) : undefined,
     });
-    if (info.owner_name) {
-      customerApi.setValues({ name: info.owner_name, address: info.owner_address });
+    if (info.ownerName) {
+      customerApi.setValues({ name: info.ownerName, address: info.ownerAddress });
     }
     message.success('行驶证正页识别完成，已填入车辆/客户信息');
   } catch (e) {
@@ -137,22 +139,22 @@ async function uploadDrivingBack(opt: any) {
     const res = await requestClient.upload<{ url: string }>('/upload', {
       file: opt.file as File,
     });
-    files.driving_back = res.url;
+    files.drivingBack = res.url;
     opt.onSuccess?.(res);
     const info = await requestClient.get<any>('/ocr/vehicle-license', {
       params: { imageUrl: res.url, side: 'back' },
     });
     vehicleApi.setValues({
       seats: info.seats ? Number(info.seats) : undefined,
-      energy_type: info.energy_type || undefined,
+      energyType: info.energyType || undefined,
     });
-    if (info.inspection_record) {
+    if (info.inspectionRecord) {
       const vals = await remarkApi.getValues();
       const cur = (vals as Record<string, any>)?.remark || '';
       remarkApi.setValues({
         remark: cur
-          ? `${cur}\n[检验记录] ${info.inspection_record}`
-          : `[检验记录] ${info.inspection_record}`,
+          ? `${cur}\n[检验记录] ${info.inspectionRecord}`
+          : `[检验记录] ${info.inspectionRecord}`,
       });
     }
     message.success('行驶证副页识别完成，已填入座位/油电/检验记录');
@@ -167,14 +169,14 @@ async function uploadSsnFront(opt: any) {
     const res = await requestClient.upload<{ url: string }>('/upload', {
       file: opt.file as File,
     });
-    files.ssn_front = res.url;
+    files.ssnFront = res.url;
     opt.onSuccess?.(res);
     const info = await requestClient.get<any>('/ocr/id-card', {
       params: { imageUrl: res.url, side: 'front' },
     });
     customerApi.setValues({
       name: info.name,
-      id_number: info.id_number,
+      idNumber: info.idNumber,
       address: info.address,
       birthday: info.birth ? dayjs(info.birth) : undefined,
     });
@@ -190,14 +192,14 @@ async function uploadSsnBack(opt: any) {
     const res = await requestClient.upload<{ url: string }>('/upload', {
       file: opt.file as File,
     });
-    files.ssn_back = res.url;
+    files.ssnBack = res.url;
     opt.onSuccess?.(res);
     const info = await requestClient.get<any>('/ocr/id-card', {
       params: { imageUrl: res.url, side: 'back' },
     });
     customerApi.setValues({
-      id_authority: info.id_authority,
-      id_valid_date: info.id_valid_date,
+      idAuthority: info.idAuthority,
+      idValidDate: info.idValidDate,
     });
     message.success('身份证反面识别完成，已填入签发机关/有效期');
   } catch (e) {
@@ -206,10 +208,10 @@ async function uploadSsnBack(opt: any) {
 }
 
 const OCR_HANDLERS: Record<string, (opt: any) => Promise<void>> = {
-  driving_front: uploadDrivingFront,
-  driving_back: uploadDrivingBack,
-  ssn_front: uploadSsnFront,
-  ssn_back: uploadSsnBack,
+  drivingFront: uploadDrivingFront,
+  drivingBack: uploadDrivingBack,
+  ssnFront: uploadSsnFront,
+  ssnBack: uploadSsnBack,
 };
 
 const picUploadProps = (key: string) => ({
@@ -240,24 +242,24 @@ const docUploadProps = () => ({
   accept: '.doc,.docx,.pdf',
   multiple: false,
   maxCount: 1,
-  fileList: fileLists.policy_file ?? [],
+  fileList: fileLists.policyFile ?? [],
   onChange: (info: any) => {
-    fileLists.policy_file = info.fileList;
+    fileLists.policyFile = info.fileList;
   },
   onRemove: () => {
-    files.policy_file = '';
-    fileLists.policy_file = [];
+    files.policyFile = '';
+    fileLists.policyFile = [];
     return true;
   },
-  showUploadButton: (fileLists.policy_file?.length ?? 0) < 1,
+  showUploadButton: (fileLists.policyFile?.length ?? 0) < 1,
   beforeUpload: () => {
-    if ((fileLists.policy_file?.length ?? 0) >= 1) {
+    if ((fileLists.policyFile?.length ?? 0) >= 1) {
       message.warning('只能上传一张，请先删除已有文件');
       return false;
     }
     return true;
   },
-  customRequest: makeCustomRequest('policy_file'),
+  customRequest: makeCustomRequest('policyFile'),
 });
 
 async function onSubmit() {
@@ -297,13 +299,13 @@ async function onSubmit() {
               身份证（上传后 OCR 自动填表）
             </div>
             <div class="grid grid-cols-2 gap-3">
-              <Upload v-bind="picUploadProps('ssn_front')">
+              <Upload v-bind="picUploadProps('ssnFront')">
                 <div class="flex flex-col items-center">
                   <Plus class="size-5" />
                   <div class="mt-1 text-xs">身份证正面</div>
                 </div>
               </Upload>
-              <Upload v-bind="picUploadProps('ssn_back')">
+              <Upload v-bind="picUploadProps('ssnBack')">
                 <div class="flex flex-col items-center">
                   <Plus class="size-5" />
                   <div class="mt-1 text-xs">身份证反面</div>
@@ -325,13 +327,13 @@ async function onSubmit() {
               行驶证（上传后 OCR 自动填表）
             </div>
             <div class="grid grid-cols-2 gap-3">
-              <Upload v-bind="picUploadProps('driving_front')">
+              <Upload v-bind="picUploadProps('drivingFront')">
                 <div class="flex flex-col items-center">
                   <Plus class="size-5" />
                   <div class="mt-1 text-xs">行驶证正页</div>
                 </div>
               </Upload>
-              <Upload v-bind="picUploadProps('driving_back')">
+              <Upload v-bind="picUploadProps('drivingBack')">
                 <div class="flex flex-col items-center">
                   <Plus class="size-5" />
                   <div class="mt-1 text-xs">行驶证副页</div>
@@ -361,7 +363,7 @@ async function onSubmit() {
           <div class="md:col-span-1 space-y-3">
             <div class="text-sm text-gray-500">其他材料</div>
             <div class="grid grid-cols-2 gap-3">
-              <Upload v-bind="picUploadProps('business_license')">
+              <Upload v-bind="picUploadProps('businessLicense')">
                 <div class="flex flex-col items-center">
                   <Plus class="size-5" />
                   <div class="mt-1 text-xs">营业执照</div>
