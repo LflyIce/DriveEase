@@ -33,24 +33,68 @@ export namespace PolicyApi {
     compulsoryDetail?: null | string; // TEXT 存 JSON 字符串
     commercialDetail?: null | string; // TEXT 存 JSON 字符串
     remark?: null | string;
+    // 保费拆分
+    trafficPremium?: null | number;
+    travelTax?: null | number;
+    commercialPremium?: null | number;
+    surchargePremium?: null | number;
+    surchargePremium2?: null | number;
+    // 手续费与支出
+    commission?: null | number;
+    expenses?: null | number;
+    trafficRate?: null | number;
+    trafficCharge?: null | number;
+    commercialRate?: null | number;
+    commercialCharge?: null | number;
+    surchargeRate?: null | number;
+    surchargeCharge?: null | number;
+    surchargeRate2?: null | number;
+    surchargeCharge2?: null | number;
+    totalCharge?: null | number;
+    // 材料文件 URL（COS）
+    quotation?: null | string; // 其他承保材料（图片）
+    policyFile?: null | string; // 电子保单（doc/pdf）
     createdAt?: string;
     updatedAt?: string;
     // 后端 JOIN 出来的嵌套对象（列表/详情）
-    customer?: {
+    customer?: null | {
+      address?: null | string;
+      birthday?: null | string;
+      businessArea?: null | string;
+      businessAttribution?: null | string;
+      businessLicense?: null | string;
+      customerType?: null | string;
+      email?: null | string;
+      followStatus?: null | string;
       id: number;
+      idAuthority?: null | string;
+      idNumber?: null | string;
+      idValidDate?: null | string;
       name: string;
       phone: string;
-      email?: null | string;
-      idNumber?: null | string;
-    } | null;
-    vehicle?: {
-      id: number;
-      plateNumber: string;
+      ssnBack?: null | string;
+      ssnFront?: null | string;
+    };
+    vehicle?: null | {
       brand: string;
+      brandModel?: null | string;
+      certificateDate?: null | string;
+      drivingBack?: null | string;
+      drivingFront?: null | string;
+      energyType?: null | string;
+      engineNumber?: null | string;
+      id: number;
+      loadCapacity?: null | number;
       model: string;
-      year?: null | number;
+      nextInspectionDate?: null | string;
+      plateNumber: string;
+      registerDate?: null | string;
+      seats?: null | number;
+      transferFlag?: null | string;
+      vehicleType?: null | string;
       vin?: null | string;
-    } | null;
+      year?: null | number;
+    };
   }
 
   export interface PageResult {

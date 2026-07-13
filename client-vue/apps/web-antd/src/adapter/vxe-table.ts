@@ -72,6 +72,20 @@ setupVbenVxeTable({
 
 export const useVbenVxeGrid = <T extends Record<string, any>>(
   ...rest: Parameters<typeof useGrid<T, ComponentType, ComponentPropsMap>>
-) => useGrid<T, ComponentType, ComponentPropsMap>(...rest);
+) => {
+  // 全局隐藏工具栏「切换搜索表单」按钮（放大镜 vxe-icon-search）：查询条件始终默认展开显示。
+  // showSearchForm 默认即 true，去掉按钮后表单不会被收起；覆盖各页面 toolbarConfig.search:true。
+  const gridProps = rest[0] as any;
+  if (gridProps) {
+    gridProps.gridOptions = {
+      ...(gridProps.gridOptions ?? {}),
+      toolbarConfig: {
+        ...(gridProps.gridOptions?.toolbarConfig ?? {}),
+        search: false,
+      },
+    };
+  }
+  return useGrid<T, ComponentType, ComponentPropsMap>(...rest);
+};
 
 export type * from '@vben/plugins/vxe-table';

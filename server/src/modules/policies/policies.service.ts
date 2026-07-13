@@ -28,6 +28,7 @@ export class PoliciesService {
     pageSize = 10,
     keyword?: string,
     status?: string,
+    expiryWithin?: number,
   ): Promise<PaginatedResult<any>> {
     const conditions: string[] = [];
     const params: any[] = [];
@@ -39,6 +40,16 @@ export class PoliciesService {
     if (status) {
       conditions.push('p.status = ?');
       params.push(status);
+    }
+    // 到期窗口：未来 N 天内到期且未过期（expiry_date 存 'YYYY-MM-DD'，字典序即日期序）
+    if (expiryWithin && expiryWithin > 0) {
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const now = new Date();
+      const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      const futureDate = new Date(now.getTime() + expiryWithin * 24 * 3600 * 1000);
+      const future = `${futureDate.getFullYear()}-${pad(futureDate.getMonth() + 1)}-${pad(futureDate.getDate())}`;
+      conditions.push('(p.expiry_date IS NOT NULL AND p.expiry_date >= ? AND p.expiry_date <= ?)');
+      params.push(today, future);
     }
     const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
 
@@ -65,36 +76,25 @@ export class PoliciesService {
     return { data: formatted, total, page: Number(page), pageSize: Number(pageSize) };
   }
 
+  // 详情：保单全字段 + 关联客户/车辆全字段（含证件照片 URL）。
+  // 拆成 3 条查询，避免 customer/vehicle 的 id/created_at/customer_id 等列名与 policy 冲突。
+  // 返回 snake_case 行 + 嵌套 snake_case 对象，由 TransformInterceptor 统一转 camelCase。
   async findOneOrFail(id: number): Promise<any> {
-    const rows = (await this.dataSource.query(
-      `SELECT p.*, c.name as customer_name, c.phone as customer_phone, c.email as customer_email, c.id_number,
-              v.plate_number, v.brand as vehicle_brand, v.model as vehicle_model, v.year as vehicle_year, v.vin
-       ${POLICY_LIST_FROM} WHERE p.id = ?`,
+    const policyRows = (await this.dataSource.query(
+      'SELECT * FROM policy WHERE id = ?',
       [id],
     )) as any[];
-    const row = rows[0];
-    if (!row) throw new NotFoundException('保单不存在');
-    const {
-      customer_name,
-      customer_phone,
-      customer_email,
-      id_number,
-      plate_number,
-      vehicle_brand,
-      vehicle_model,
-      vehicle_year,
-      vin,
-      ...policy
-    } = row;
-    return {
-      ...policy,
-      customer: customer_name
-        ? { name: customer_name, phone: customer_phone, email: customer_email, id_number }
-        : null,
-      vehicle: plate_number
-        ? { plate_number, brand: vehicle_brand, model: vehicle_model, year: vehicle_year, vin }
-        : null,
-    };
+    const p = policyRows[0];
+    if (!p) throw new NotFoundException('保单不存在');
+
+    const customer = p.customer_id
+      ? ((await this.dataSource.query('SELECT * FROM customer WHERE id = ?', [p.customer_id])) as any[])[0] ?? null
+      : null;
+    const vehicle = p.vehicle_id
+      ? ((await this.dataSource.query('SELECT * FROM vehicle WHERE id = ?', [p.vehicle_id])) as any[])[0] ?? null
+      : null;
+
+    return { ...p, customer, vehicle };
   }
 
   // Repository 写入（driver 在 autoSave 前捕获 lastInsertRowid；原生 query 的 last_insert_rowid() 会被 autoSave 重置为 0）
@@ -193,36 +193,28 @@ export class PoliciesService {
     return { message: '删除成功' };
   }
 
-  // 录入页聚合接口：upsert 客户(按手机号) + 车辆(按车牌) + 新建保单
-  // 注：sql.js 默认无事务，多步写非原子（与原 Express 版一致）
+  // 录入页聚合接口：客户(按手机号命中则只复用 id，否则新建) + 车辆(永远新建，车牌重复则拒绝) + 新建保单。
+  // 设计：录入=新车新单；同车新一期保单走续保(renewals)流程。注：sql.js 默认无事务，多步写非原子。
   async createFull(b: CreatePolicyFullDto): Promise<any> {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
-    // 1. upsert customer（按 phone 复用）
+    // 1. 客户：按 phone 查，命中只复用 id（不改字段，老资料保持不变）
     let customerId: number | undefined;
     if (b.phone) {
       const exist = await this.customerRepo.findOneBy({ phone: b.phone });
-      if (exist) {
-        await this.customerRepo.update(exist.id, {
-          name: b.name,
-          idNumber: b.idNumber ?? null,
-          birthday: b.birthday ?? null,
-          customerType: b.customerType ?? null,
-          businessAttribution: b.businessAttribution ?? null,
-          businessArea: b.businessArea ?? null,
-          address: b.address ?? null,
-          followStatus: b.followStatus ? JSON.stringify(b.followStatus) : null,
-          ssnFront: b.ssnFront ?? null,
-          businessLicense: b.businessLicense ?? null,
-          ssnBack: b.ssnBack ?? null,
-          idAuthority: b.idAuthority ?? null,
-          idValidDate: b.idValidDate ?? null,
-        });
-        customerId = exist.id;
-      }
+      if (exist) customerId = exist.id;
     }
+
+    // 2. 车辆：录入页一车一保单——车牌必须不存在。提前校验，避免插了客户又抛错留孤儿行
+    if (!b.plateNumber) throw new BadRequestException('车牌号为必填');
+    const vehicleExist = await this.vehicleRepo.findOneBy({ plateNumber: b.plateNumber });
+    if (vehicleExist) {
+      throw new BadRequestException('该车牌已录入，如需续保请使用续保流程');
+    }
+
+    // 3. 新客户才插入（复用时跳过）
     if (customerId === undefined) {
       const saved = await this.customerRepo.save(
         this.customerRepo.create({
@@ -245,60 +237,32 @@ export class PoliciesService {
       customerId = saved.id;
     }
 
-    // 2. upsert vehicle（按 plateNumber 复用；旧 brand/model 用 brandModel 兜底）
-    let vehicleId: number | undefined;
+    // 4. 插入新车辆（车牌已确认不存在；旧 brand/model 用 brandModel 兜底）
     const brandModel = b.brandModel ?? '';
-    if (b.plateNumber) {
-      const exist = await this.vehicleRepo.findOneBy({ plateNumber: b.plateNumber });
-      if (exist) {
-        await this.vehicleRepo.update(exist.id, {
-          brand: brandModel,
-          model: brandModel,
-          vin: b.vin ?? null,
-          engineNumber: b.engineNumber ?? null,
-          brandModel,
-          energyType: b.energyType ?? null,
-          vehicleType: b.vehicleType ?? null,
-          registerDate: b.registerDate ?? null,
-          certificateDate: b.certificateDate ?? null,
-          nextInspectionDate: b.nextInspectionDate ?? null,
-          transferFlag: b.transferFlag ?? null,
-          seats: b.seats ?? null,
-          loadCapacity: b.loadCapacity ?? null,
-          drivingFront: b.drivingFront ?? null,
-          drivingBack: b.drivingBack ?? null,
-          customerId,
-        });
-        vehicleId = exist.id;
-      }
-    }
-    if (vehicleId === undefined) {
-      if (!b.plateNumber) throw new BadRequestException('车牌号为必填');
-      const saved = await this.vehicleRepo.save(
-        this.vehicleRepo.create({
-          plateNumber: b.plateNumber,
-          brand: brandModel,
-          model: brandModel,
-          vin: b.vin ?? null,
-          engineNumber: b.engineNumber ?? null,
-          customerId,
-          brandModel,
-          energyType: b.energyType ?? null,
-          vehicleType: b.vehicleType ?? null,
-          registerDate: b.registerDate ?? null,
-          certificateDate: b.certificateDate ?? null,
-          nextInspectionDate: b.nextInspectionDate ?? null,
-          transferFlag: b.transferFlag ?? null,
-          seats: b.seats ?? null,
-          loadCapacity: b.loadCapacity ?? null,
-          drivingFront: b.drivingFront ?? null,
-          drivingBack: b.drivingBack ?? null,
-        }),
-      );
-      vehicleId = saved.id;
-    }
+    const savedVehicle = await this.vehicleRepo.save(
+      this.vehicleRepo.create({
+        plateNumber: b.plateNumber,
+        brand: brandModel,
+        model: brandModel,
+        vin: b.vin ?? null,
+        engineNumber: b.engineNumber ?? null,
+        customerId,
+        brandModel,
+        energyType: b.energyType ?? null,
+        vehicleType: b.vehicleType ?? null,
+        registerDate: b.registerDate ?? null,
+        certificateDate: b.certificateDate ?? null,
+        nextInspectionDate: b.nextInspectionDate ?? null,
+        transferFlag: b.transferFlag ?? null,
+        seats: b.seats ?? null,
+        loadCapacity: b.loadCapacity ?? null,
+        drivingFront: b.drivingFront ?? null,
+        drivingBack: b.drivingBack ?? null,
+      }),
+    );
+    const vehicleId = savedVehicle.id;
 
-    // 3. 新建保单（policy_number 自动生成；推导 insurance_type；日期双写）
+    // 5. 新建保单（policy_number 自动生成；推导 insurance_type；日期双写）
     const policyNumber = `POL-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
     const hasTraffic = Number(b.trafficPremium) > 0;
     const hasCommercial = Number(b.commercialPremium) > 0;

@@ -15,7 +15,13 @@ export class PoliciesController {
   @Get()
   @ApiOperation({ summary: '保单列表（分页+关键字+状态，关键字跨客户/车辆）' })
   findMany(@Query() query: QueryPolicyDto) {
-    return this.policiesService.findMany(query.page, query.pageSize, query.keyword, query.status);
+    return this.policiesService.findMany(
+      query.page,
+      query.pageSize,
+      query.keyword,
+      query.status,
+      query.expiryWithin,
+    );
   }
 
   @Get(':id')

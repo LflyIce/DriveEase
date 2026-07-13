@@ -1,6 +1,8 @@
 import type { VbenFormSchema } from '#/adapter/form';
 import type { VxeTableGridColumns } from '#/adapter/vxe-table';
 
+import dayjs from 'dayjs';
+
 import { getInsuranceCompanyList } from '#/api/insurance-company';
 import { getUserList } from '#/api/user';
 
@@ -53,6 +55,7 @@ export function useColumns(): VxeTableGridColumns {
     { field: 'customerPhone', title: '电话', width: 130 },
     { field: 'plateNumber', title: '车牌号', width: 110 },
     { field: 'insuranceCompany', title: '保险公司', width: 130 },
+    { field: 'salesPerson', title: '业务员', width: 100 },
     { field: 'insuranceType', title: '险种', width: 90 },
     {
       align: 'right',
@@ -67,6 +70,13 @@ export function useColumns(): VxeTableGridColumns {
       formatter: ({ cellValue }) => formatMoney(cellValue),
       title: '保额',
       width: 130,
+    },
+    {
+      align: 'right',
+      field: 'totalCharge',
+      formatter: ({ cellValue }) => formatMoney(cellValue),
+      title: '手续费',
+      width: 110,
     },
     { field: 'effectiveDate', title: '起保日期', width: 120 },
     { field: 'expiryDate', title: '到期日期', width: 120 },
@@ -144,7 +154,7 @@ export function useCustomerSchema(): VbenFormSchema[] {
     { component: 'Input', fieldName: 'idNumber', label: '身份证/信用代码' },
     { component: 'Input', fieldName: 'idAuthority', label: '签发机关' },
     { component: 'Input', fieldName: 'idValidDate', label: '证件有效期' },
-    { component: 'Input', fieldName: 'phone', label: '手机号码' },
+    { component: 'Input', fieldName: 'phone', label: '手机号码', rules: 'required' },
     { component: 'DatePicker', fieldName: 'birthday', label: '客户生日' },
     {
       component: 'RadioGroup',
@@ -272,6 +282,13 @@ export function usePremiumSchema(): VbenFormSchema[] {
     },
     {
       component: 'DatePicker',
+      componentProps: (_values, formApi) => ({
+        style: 'width:100%',
+        onChange: (val: any) => {
+          // 选了投保日期 → 到期日期自动 = 投保日期 + 1 年（覆盖默认值）
+          if (val) formApi?.setValues({ expiryDate: dayjs(val).add(1, 'year') });
+        },
+      }),
       fieldName: 'policyDate',
       label: '投保日期',
       rules: 'required',
