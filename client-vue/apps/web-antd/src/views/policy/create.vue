@@ -4,7 +4,7 @@ import { reactive, ref } from 'vue';
 import { Page } from '@vben/common-ui';
 import { Plus } from '@vben/icons';
 
-import { Button, Card, message, Upload } from 'ant-design-vue';
+import { Button, Card, Image, message, Upload } from 'ant-design-vue';
 import dayjs from 'dayjs';
 import { useRouter } from 'vue-router';
 
@@ -67,6 +67,14 @@ const DATE_FIELDS = [
   'expiryDate',
 ];
 
+// 费率字段：UI 不预填，提交时空值补默认 100
+const RATE_FIELDS = [
+  'trafficRate',
+  'commercialRate',
+  'surchargeRate',
+  'surchargeRate2',
+];
+
 // —— 材料上传（COS）+ OCR 自动填表 ——
 // 这些键即提交给 /policies/full 的文件 URL 字段（camelCase，对齐后端 DTO）
 const files = reactive<Record<string, string>>({
@@ -89,6 +97,22 @@ const fileLists = reactive<Record<string, any[]>>({
   quotation: [],
   policyFile: [],
 });
+
+// 图片预览：antd Upload 的预览图标是 <a target="_blank">，默认会开新标签页且 href 为空。
+// 接管 onPreview，在当前页用 Image 受控预览弹大图（支持缩放/旋转）。
+const previewVisible = ref(false);
+const previewSrc = ref('');
+const onPreviewVisibleChange = (v: boolean) => {
+  previewVisible.value = v;
+};
+const onUploadPreview = (file: any, e?: Event) => {
+  e?.preventDefault?.();
+  const url = file.url || file.response?.url || file.thumbUrl;
+  if (url) {
+    previewSrc.value = url;
+    previewVisible.value = true;
+  }
+};
 
 function makeCustomRequest(key: string) {
   return async (opt: any) => {
@@ -228,7 +252,6 @@ const picUploadProps = (key: string) => ({
     fileLists[key] = [];
     return true;
   },
-  showUploadButton: (fileLists[key]?.length ?? 0) < 1,
   beforeUpload: () => {
     if ((fileLists[key]?.length ?? 0) >= 1) {
       message.warning('只能上传一张，请先删除已有文件');
@@ -237,6 +260,7 @@ const picUploadProps = (key: string) => ({
     return true;
   },
   customRequest: OCR_HANDLERS[key] || makeCustomRequest(key),
+  onPreview: onUploadPreview,
 });
 const docUploadProps = () => ({
   accept: '.doc,.docx,.pdf',
@@ -274,6 +298,11 @@ async function onSubmit() {
       const v = (values as Record<string, any>)[f];
       if (v && dayjs.isDayjs(v)) (values as Record<string, any>)[f] = v.format('YYYY-MM-DD');
     }
+    // 费率字段 UI 不预填，提交时空值补默认 100
+    for (const r of RATE_FIELDS) {
+      const cur = (values as Record<string, any>)[r];
+      if (cur == null || cur === '') (values as Record<string, any>)[r] = 100;
+    }
     await createPolicyFull({ ...values, ...files });
     message.success('保单创建成功');
     router.push('/policies/query');
@@ -300,13 +329,19 @@ async function onSubmit() {
             </div>
             <div class="grid grid-cols-2 gap-3">
               <Upload v-bind="picUploadProps('ssnFront')">
-                <div class="flex flex-col items-center">
+                <div
+                  v-if="(fileLists.ssnFront?.length ?? 0) < 1"
+                  class="flex flex-col items-center"
+                >
                   <Plus class="size-5" />
                   <div class="mt-1 text-xs">身份证正面</div>
                 </div>
               </Upload>
               <Upload v-bind="picUploadProps('ssnBack')">
-                <div class="flex flex-col items-center">
+                <div
+                  v-if="(fileLists.ssnBack?.length ?? 0) < 1"
+                  class="flex flex-col items-center"
+                >
                   <Plus class="size-5" />
                   <div class="mt-1 text-xs">身份证反面</div>
                 </div>
@@ -328,13 +363,19 @@ async function onSubmit() {
             </div>
             <div class="grid grid-cols-2 gap-3">
               <Upload v-bind="picUploadProps('drivingFront')">
-                <div class="flex flex-col items-center">
+                <div
+                  v-if="(fileLists.drivingFront?.length ?? 0) < 1"
+                  class="flex flex-col items-center"
+                >
                   <Plus class="size-5" />
                   <div class="mt-1 text-xs">行驶证正页</div>
                 </div>
               </Upload>
               <Upload v-bind="picUploadProps('drivingBack')">
-                <div class="flex flex-col items-center">
+                <div
+                  v-if="(fileLists.drivingBack?.length ?? 0) < 1"
+                  class="flex flex-col items-center"
+                >
                   <Plus class="size-5" />
                   <div class="mt-1 text-xs">行驶证副页</div>
                 </div>
@@ -389,6 +430,16 @@ async function onSubmit() {
           提交
         </Button>
       </div>
+
+      <!-- 图片预览层：受控 Image，由 onUploadPreview 触发 -->
+      <Image
+        v-show="false"
+        :src="previewSrc"
+        :preview="{
+          visible: previewVisible,
+          onVisibleChange: onPreviewVisibleChange,
+        }"
+      />
     </div>
   </Page>
 </template>

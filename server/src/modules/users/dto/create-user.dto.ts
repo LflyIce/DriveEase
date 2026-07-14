@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateUserDto {
   @ApiProperty()
@@ -16,10 +16,10 @@ export class CreateUserDto {
   @IsString()
   email?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty({ description: '登录账号，必须唯一' })
   @IsString()
-  phone?: string;
+  @IsNotEmpty({ message: '手机号不能为空' })
+  phone: string;
 
   @ApiPropertyOptional({ description: "'管理员' | '普通员工'" })
   @IsOptional()

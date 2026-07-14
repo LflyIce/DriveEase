@@ -21,6 +21,7 @@ const [FormModalComp, formModalApi] = useVbenModal({
 
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: {
+    commonConfig: { labelWidth: 60 },
     schema: useGridFormSchema(),
   },
   gridOptions: {

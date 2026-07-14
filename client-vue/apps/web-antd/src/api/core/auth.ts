@@ -13,7 +13,7 @@ export namespace AuthApi {
   /** 登录接口参数 */
   export interface LoginParams {
     password?: string;
-    username?: string;
+    phone?: string;
   }
 
   /** 登录接口返回值（vben 约定） */

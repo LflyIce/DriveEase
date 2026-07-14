@@ -20,11 +20,37 @@ const stats = ref<StatsApi.Dashboard>();
 const upcoming = ref<RenewalApi.Renewal[]>([]);
 const loading = ref(false);
 
-// ---- 图表 ----
+// dataviz 已验证 CVD 的分类色板（固定序、不循环）
+const C_BLUE = '#2a78d6';
+const C_AQUA = '#1baf7a';
+const CHART_COLORS = [
+  C_BLUE,
+  C_AQUA,
+  '#eda100',
+  '#008300',
+  '#4a3aa7',
+  '#e34948',
+  '#e87ba4',
+  '#eb6834',
+];
+
+const money = (n: number) =>
+  (n ?? 0).toLocaleString('zh-CN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+// ---- 图表 refs ----
 const trendRef = ref();
-const pieRef = ref();
+const employeeRef = ref();
+const vehicleTypeRef = ref();
+const insurancePieRef = ref();
+const premiumMixRef = ref();
 const { renderEcharts: renderTrend } = useEcharts(trendRef);
-const { renderEcharts: renderPie } = useEcharts(pieRef);
+const { renderEcharts: renderEmployee } = useEcharts(employeeRef);
+const { renderEcharts: renderVehicleType } = useEcharts(vehicleTypeRef);
+const { renderEcharts: renderInsurancePie } = useEcharts(insurancePieRef);
+const { renderEcharts: renderPremiumMix } = useEcharts(premiumMixRef);
 
 const STATUS_COLOR: Record<string, string> = {
   已提醒: 'blue',
@@ -37,53 +63,36 @@ const cards = computed(() => [
   {
     bg: '#e6f4ff',
     color: '#1677ff',
-    icon: 'lucide:users',
-    key: 'customer',
-    sub: '累计客户数',
-    title: '客户总数',
-    value: stats.value?.customerCount ?? 0,
-  },
-  {
-    bg: '#e6fffb',
-    color: '#13c2c2',
-    icon: 'lucide:car',
-    key: 'vehicle',
-    sub: '累计车辆数',
-    title: '车辆总数',
-    value: stats.value?.vehicleCount ?? 0,
-  },
-  {
-    bg: '#f9f0ff',
-    color: '#722ed1',
-    icon: 'lucide:file-text',
-    key: 'policy',
-    sub: `本月新增 ${stats.value?.monthlyNewPolicies ?? 0}`,
-    title: '保单总数',
-    value: stats.value?.policyCount ?? 0,
+    icon: 'lucide:file-plus-2',
+    key: 'todayPolicy',
+    title: '当天保单数',
+    value: stats.value?.todayPolicyCount ?? 0,
   },
   {
     bg: '#f6ffed',
     color: '#52c41a',
     icon: 'lucide:shield-check',
-    key: 'active',
-    sub: `30 天内到期 ${stats.value?.expiringPolicies ?? 0}`,
-    title: '生效保单',
-    value: stats.value?.activePolicies ?? 0,
+    key: 'trafficPremium',
+    title: '交强险保费',
+    value: money(stats.value?.trafficPremiumTotal ?? 0),
+  },
+  {
+    bg: '#fff7e6',
+    color: '#fa8c16',
+    icon: 'lucide:briefcase',
+    key: 'commercialPremium',
+    title: '商业险保费',
+    value: money(stats.value?.commercialPremiumTotal ?? 0),
+  },
+  {
+    bg: '#f9f0ff',
+    color: '#722ed1',
+    icon: 'lucide:landmark',
+    key: 'sumInsured',
+    title: '保额',
+    value: money(stats.value?.sumInsuredTotal ?? 0),
   },
 ]);
-
-// 假数据：近 6 个月保费收入趋势
-const trendMonths = Array.from({ length: 6 }, (_, i) =>
-  dayjs().subtract(5 - i, 'month').format('M月'),
-);
-const trendValues = [45_200, 58_300, 49_800, 67_100, 62_400, 71_500];
-
-// 假数据：险种占比
-const pieData = [
-  { name: '综合险', value: 45 },
-  { name: '商业险', value: 35 },
-  { name: '交强险', value: 20 },
-];
 
 const renewalColumns = [
   {
@@ -123,46 +132,124 @@ async function load() {
     ]);
     stats.value = s;
     upcoming.value = u;
+
+    // 保费趋势：前端补零（固定近 6 个月桶，缺数据月填 0）
+    const months = Array.from({ length: 6 }, (_, i) =>
+      dayjs().subtract(5 - i, 'month').format('YYYY-MM'),
+    );
+    const trendMap = new Map(
+      (s.premiumTrend ?? []).map((t) => [t.month, t.premium]),
+    );
+    const trendValues = months.map((m) => trendMap.get(m) ?? 0);
+    renderTrend({
+      color: [C_BLUE],
+      grid: { bottom: 30, left: 50, right: 20, top: 30 },
+      tooltip: { trigger: 'axis' },
+      xAxis: { boundaryGap: false, data: months, type: 'category' },
+      yAxis: { name: '元', type: 'value' },
+      series: [
+        {
+          areaStyle: { opacity: 0.15 },
+          data: trendValues,
+          itemStyle: { color: C_BLUE },
+          lineStyle: { width: 3 },
+          name: '保费收入',
+          smooth: true,
+          type: 'line',
+        },
+      ],
+    });
+
+    // 员工开单数（柱）
+    const emp = s.employeeRanking ?? [];
+    renderEmployee({
+      color: [C_BLUE],
+      grid: { bottom: 20, left: 90, right: 48, top: 20 },
+      tooltip: { axisPointer: { type: 'shadow' }, trigger: 'axis' },
+      xAxis: { name: '单', type: 'value' },
+      yAxis: {
+        data: emp.map((e) => e.name),
+        inverse: true,
+        type: 'category',
+      },
+      series: [
+        {
+          barMaxWidth: 30,
+          data: emp.map((e) => e.value),
+          itemStyle: { borderRadius: [0, 4, 4, 0], color: C_BLUE },
+          label: { position: 'right', show: true },
+          name: '开单数',
+          type: 'bar',
+        },
+      ],
+    });
+
+    // 车辆类型（柱）
+    const vt = s.vehicleTypeStats ?? [];
+    renderVehicleType({
+      color: [C_AQUA],
+      grid: { bottom: 20, left: 110, right: 48, top: 20 },
+      tooltip: { axisPointer: { type: 'shadow' }, trigger: 'axis' },
+      xAxis: { name: '单', type: 'value' },
+      yAxis: {
+        data: vt.map((v) => v.name),
+        inverse: true,
+        type: 'category',
+      },
+      series: [
+        {
+          barMaxWidth: 30,
+          data: vt.map((v) => v.value),
+          itemStyle: { borderRadius: [0, 4, 4, 0], color: C_AQUA },
+          label: { position: 'right', show: true },
+          name: '车辆数',
+          type: 'bar',
+        },
+      ],
+    });
+
+    // 险种占比（饼，按保单数）
+    renderInsurancePie({
+      color: CHART_COLORS,
+      legend: { bottom: 0 },
+      tooltip: { trigger: 'item' },
+      series: [
+        {
+          center: ['50%', '45%'],
+          data: (s.insuranceMix ?? []).map((i) => ({
+            name: i.name,
+            value: i.value,
+          })),
+          label: { formatter: '{b}: {d}%' },
+          radius: ['45%', '70%'],
+          type: 'pie',
+        },
+      ],
+    });
+
+    // 保费占比（饼，交强/商业/非车）
+    const pm = s.premiumMix ?? { commercial: 0, surcharge: 0, traffic: 0 };
+    renderPremiumMix({
+      color: CHART_COLORS,
+      legend: { bottom: 0 },
+      tooltip: { trigger: 'item' },
+      series: [
+        {
+          center: ['50%', '45%'],
+          data: [
+            { name: '交强险', value: pm.traffic },
+            { name: '商业险', value: pm.commercial },
+            { name: '非车险', value: pm.surcharge },
+          ],
+          label: { formatter: '{b}: {d}%' },
+          radius: ['45%', '70%'],
+          type: 'pie',
+        },
+      ],
+    });
   } finally {
     loading.value = false;
   }
-
-  renderTrend({
-    areaStyle: { opacity: 0.15 },
-    color: ['#1677ff'],
-    grid: { bottom: 30, left: 50, right: 20, top: 30 },
-    itemStyle: { color: '#1677ff' },
-    lineStyle: { width: 3 },
-    series: [
-      {
-        areaStyle: { opacity: 0.15 },
-        data: trendValues,
-        itemStyle: { color: '#1677ff' },
-        lineStyle: { width: 3 },
-        name: '保费收入',
-        smooth: true,
-        type: 'line',
-      },
-    ],
-    tooltip: { trigger: 'axis' },
-    xAxis: { boundaryGap: false, data: trendMonths, type: 'category' },
-    yAxis: { name: '元', type: 'value' },
-  });
-
-  renderPie({
-    color: ['#722ed1', '#1677ff', '#13c2c2'],
-    legend: { bottom: 0 },
-    series: [
-      {
-        center: ['50%', '45%'],
-        data: pieData,
-        label: { formatter: '{b}: {d}%' },
-        radius: ['45%', '70%'],
-        type: 'pie',
-      },
-    ],
-    tooltip: { trigger: 'item' },
-  });
 }
 
 onMounted(load);
@@ -171,10 +258,10 @@ onMounted(load);
 <template>
   <Page auto-content-height>
     <Spin :spinning="loading">
-      <!-- 顶部 KPI 卡片 -->
-      <Row :gutter="[24, 24]">
+      <!-- KPI 卡 -->
+      <Row :gutter="[24, 24]" class="mb-4">
         <Col v-for="c in cards" :key="c.key" :lg="6" :md="12" :xs="24">
-          <Card class="mb-6">
+          <Card>
             <div class="flex items-center gap-4">
               <div
                 class="flex size-14 items-center justify-center rounded-2xl"
@@ -194,23 +281,41 @@ onMounted(load);
                   {{ c.value }}
                 </div>
                 <div class="text-sm text-gray-700">{{ c.title }}</div>
-                <div class="mt-0.5 text-xs text-gray-400">{{ c.sub }}</div>
               </div>
             </div>
           </Card>
         </Col>
       </Row>
 
-      <!-- 图表区 -->
-      <Row :gutter="[24, 24]">
-        <Col :lg="16" :xs="24">
-          <Card class="mb-6" title="近 6 个月保费收入趋势">
+      <!-- 员工开单 + 保费趋势 -->
+      <Row :gutter="[24, 24]" class="mb-4">
+        <Col :lg="12" :xs="24">
+          <Card title="员工开单数">
+            <EchartsUI ref="employeeRef" height="320px" />
+          </Card>
+        </Col>
+        <Col :lg="12" :xs="24">
+          <Card title="近 6 个月保费收入趋势">
             <EchartsUI ref="trendRef" height="320px" />
           </Card>
         </Col>
+      </Row>
+
+      <!-- 车辆类型 + 险种占比 + 保费占比 -->
+      <Row :gutter="[24, 24]" class="mb-4">
         <Col :lg="8" :xs="24">
-          <Card class="mb-6" title="险种占比">
-            <EchartsUI ref="pieRef" height="320px" />
+          <Card title="车辆类型统计">
+            <EchartsUI ref="vehicleTypeRef" height="320px" />
+          </Card>
+        </Col>
+        <Col :lg="8" :xs="24">
+          <Card title="险种占比">
+            <EchartsUI ref="insurancePieRef" height="320px" />
+          </Card>
+        </Col>
+        <Col :lg="8" :xs="24">
+          <Card title="保费占比">
+            <EchartsUI ref="premiumMixRef" height="320px" />
           </Card>
         </Col>
       </Row>

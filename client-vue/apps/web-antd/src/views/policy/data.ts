@@ -50,7 +50,12 @@ export function useGridFormSchema(): VbenFormSchema[] {
 export function useColumns(): VxeTableGridColumns {
   return [
     { field: 'id', title: 'ID', width: 70 },
-    { field: 'policyNumber', title: '保单号', width: 170 },
+    {
+      field: 'policyNumber',
+      slots: { default: 'policyNumber' },
+      title: '保单号',
+      width: 170,
+    },
     { field: 'customerName', title: '投保人', width: 100 },
     { field: 'customerPhone', title: '电话', width: 130 },
     { field: 'plateNumber', title: '车牌号', width: 110 },
@@ -267,6 +272,32 @@ export function usePremiumSchema(): VbenFormSchema[] {
     fieldName,
     label,
   });
+  // 合计保费 = 交强险 + 车船税 + 商业险 + 非车（非车2 不计入）
+  // 注意：componentProps 第二参 formApi 是 vee-validate FormActions（无 getValues），
+  // 读值用第一参 values（响应式表单值），写值用 formApi.setValues。
+  const PREMIUM_PARTS = [
+    'trafficPremium',
+    'travelTax',
+    'commercialPremium',
+    'surchargePremium',
+  ] as const;
+  const numLinked = (fieldName: string, label: string): VbenFormSchema => ({
+    component: 'InputNumber',
+    componentProps: (values: any, formApi: any) => ({
+      min: 0,
+      style: 'width:100%',
+      onChange: (val: any) => {
+        const m = { ...values, [fieldName]: val };
+        const sum = PREMIUM_PARTS.reduce(
+          (acc, k) => acc + (Number(m[k]) || 0),
+          0,
+        );
+        formApi?.setValues({ premium: Math.round(sum * 100) / 100 });
+      },
+    }),
+    fieldName,
+    label,
+  });
   return [
     {
       component: 'ApiSelect',
@@ -299,10 +330,10 @@ export function usePremiumSchema(): VbenFormSchema[] {
       label: '到期日期',
       rules: 'required',
     },
-    num('trafficPremium', '交强险保费'),
-    num('travelTax', '车船税'),
-    num('commercialPremium', '商业险保费'),
-    num('surchargePremium', '非车保费'),
+    numLinked('trafficPremium', '交强险保费'),
+    numLinked('travelTax', '车船税'),
+    numLinked('commercialPremium', '商业险保费'),
+    numLinked('surchargePremium', '非车保费'),
     num('surchargePremium2', '非车2保费'),
     num('premium', '合计保费'),
   ];
@@ -316,15 +347,41 @@ export function useChargeSchema(): VbenFormSchema[] {
     fieldName,
     label,
   });
+  // 手续费总计 = Σ(各手续费 × 各费率 ÷ 100)，费率为百分数（15 = 15%）；非车2 不计入。
+  // 费率字段默认空、用户可填；联动计算时费率空值按 100 兜底。
+  // 读值用 componentProps 第一参 values，写值用 formApi.setValues。
+  const CHARGE_PAIRS: Array<[string, string]> = [
+    ['trafficCharge', 'trafficRate'],
+    ['commercialCharge', 'commercialRate'],
+    ['surchargeCharge', 'surchargeRate'],
+  ];
+  const numLinked = (fieldName: string, label: string): VbenFormSchema => ({
+    component: 'InputNumber',
+    componentProps: (values: any, formApi: any) => ({
+      min: 0,
+      style: 'width:100%',
+      onChange: (val: any) => {
+        const m = { ...values, [fieldName]: val };
+        const sum = CHARGE_PAIRS.reduce(
+          (acc, [charge, rate]) =>
+            acc + ((Number(m[charge]) || 0) * (Number(m[rate]) || 100)) / 100,
+          0,
+        );
+        formApi?.setValues({ totalCharge: Math.round(sum * 100) / 100 });
+      },
+    }),
+    fieldName,
+    label,
+  });
   return [
     num('commission', '手续费'),
     num('expenses', '支出'),
-    num('trafficRate', '交强费率'),
-    num('trafficCharge', '交强手续费'),
-    num('commercialRate', '商业费率'),
-    num('commercialCharge', '商业手续费'),
-    num('surchargeRate', '非车费率'),
-    num('surchargeCharge', '非车手续费'),
+    numLinked('trafficRate', '交强费率'),
+    numLinked('trafficCharge', '交强手续费'),
+    numLinked('commercialRate', '商业费率'),
+    numLinked('commercialCharge', '商业手续费'),
+    numLinked('surchargeRate', '非车费率'),
+    numLinked('surchargeCharge', '非车手续费'),
     num('surchargeRate2', '非车2费率'),
     num('surchargeCharge2', '非车2手续费'),
     num('totalCharge', '手续费总计'),

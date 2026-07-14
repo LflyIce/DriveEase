@@ -1,13 +1,23 @@
 import { requestClient } from '#/api/request';
 
 export namespace StatsApi {
+  export interface NameValue {
+    name: string;
+    value: number;
+  }
+
   export interface Dashboard {
-    customerCount: number;
-    vehicleCount: number;
-    policyCount: number;
-    activePolicies: number;
-    expiringPolicies: number;
-    monthlyNewPolicies: number;
+    // KPI
+    todayPolicyCount: number;
+    trafficPremiumTotal: number;
+    commercialPremiumTotal: number;
+    sumInsuredTotal: number;
+    // 图表
+    employeeRanking: NameValue[];
+    vehicleTypeStats: NameValue[];
+    insuranceMix: NameValue[];
+    premiumMix: { traffic: number; commercial: number; surcharge: number };
+    premiumTrend: { month: string; premium: number }[];
   }
 }
 

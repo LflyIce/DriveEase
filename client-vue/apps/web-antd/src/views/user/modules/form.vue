@@ -46,10 +46,6 @@ const [Modal, modalApi] = useVbenModal({
     const data = modalApi.getData<UserApi.User>();
     formApi.resetForm();
     editingId.value = data?.id;
-    // 编辑时禁用用户名（后端不允许修改）
-    formApi.updateSchema([
-      { componentProps: { disabled: !!data?.id }, fieldName: 'username' },
-    ]);
     if (data?.id) {
       await nextTick();
       formApi.setValues(data);

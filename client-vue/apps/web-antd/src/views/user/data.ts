@@ -28,7 +28,7 @@ export function useFormSchema(): VbenFormSchema[] {
       label: '密码',
     },
     { component: 'Input', fieldName: 'email', label: '邮箱' },
-    { component: 'Input', fieldName: 'phone', label: '手机号' },
+    { component: 'Input', fieldName: 'phone', label: '手机号', rules: 'required' },
     {
       component: 'Select',
       componentProps: { options: ROLE_OPTIONS },

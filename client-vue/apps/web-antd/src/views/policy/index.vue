@@ -8,6 +8,7 @@ import { Page } from '@vben/common-ui';
 import { IconifyIcon } from '@vben/icons';
 
 import { Button, message, Popconfirm, Tag } from 'ant-design-vue';
+import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { deletePolicy, getPolicyList, updatePolicyStatus } from '#/api/policy';
@@ -24,6 +25,22 @@ const STATUS_COLOR: Record<string, string> = {
   已过期: 'default',
   已退保: 'red',
 };
+
+/**
+ * 保单号文字色：退保灰 / 10日内到期红 / 月内(30天)到期警告色，其余默认。
+ * 与到期快捷筛选 toggleExpiry 的 30/10 天口径一致。
+ */
+function policyNumberColor(row: PolicyApi.Policy): string | undefined {
+  if (row.status === '已退保') return 'var(--ant-colorTextSecondary, #8c8c8c)';
+  if (!row.expiryDate) return undefined;
+  const days = dayjs(row.expiryDate)
+    .startOf('day')
+    .diff(dayjs().startOf('day'), 'day');
+  if (days < 0) return undefined; // 已过期 → 默认
+  if (days <= 10) return 'var(--ant-colorError, #ff4d4f)';
+  if (days <= 30) return 'var(--ant-colorWarning, #faad14)';
+  return undefined;
+}
 
 const detailRef = ref();
 
@@ -118,6 +135,10 @@ function onDelete(row: PolicyApi.Policy) {
             10日内到期
           </Button>
         </div>
+      </template>
+
+      <template #policyNumber="{ row }">
+        <span :style="{ color: policyNumberColor(row) }">{{ row.policyNumber }}</span>
       </template>
 
       <template #status="{ row }">

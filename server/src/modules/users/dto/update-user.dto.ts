@@ -5,6 +5,11 @@ export class UpdateUserDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  username?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   password?: string;
 
   @ApiPropertyOptional()

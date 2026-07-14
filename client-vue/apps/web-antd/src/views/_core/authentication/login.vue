@@ -15,12 +15,12 @@ const formSchema = computed((): VbenFormSchema[] => [
   {
     component: 'VbenInput',
     componentProps: {
-      placeholder: '请输入用户名',
+      placeholder: '请输入手机号',
     },
-    defaultValue: 'admin',
-    fieldName: 'username',
-    label: '用户名',
-    rules: z.string().min(1, { message: '请输入用户名' }),
+    defaultValue: '13800000001',
+    fieldName: 'phone',
+    label: '手机号',
+    rules: z.string().min(1, { message: '请输入手机号' }),
   },
   {
     component: 'VbenInputPassword',

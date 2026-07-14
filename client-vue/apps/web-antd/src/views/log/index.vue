@@ -16,7 +16,7 @@ const formSchema: VbenFormSchema[] = [
 ];
 
 const [Grid] = useVbenVxeGrid({
-  formOptions: { schema: formSchema },
+  formOptions: { commonConfig: { labelWidth: 60 }, schema: formSchema },
   gridOptions: {
     columns: [
       { field: 'id', title: 'ID', width: 70 },

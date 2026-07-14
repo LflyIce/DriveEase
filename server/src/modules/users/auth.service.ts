@@ -23,11 +23,11 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const user = await this.repo.findOne({
-      where: { username: dto.username, password: this.hashPassword(dto.password) },
+      where: { phone: dto.phone, password: this.hashPassword(dto.password) },
     });
-    if (!user) throw new UnauthorizedException('用户名或密码错误');
+    if (!user) throw new UnauthorizedException('手机号或密码错误');
     if (user.status === '禁用') throw new ForbiddenException('账户已禁用');
-    this.logger.log('用户登录', dto.username, undefined, dto.username);
+    this.logger.log('用户登录', user.username, undefined, dto.phone);
     const { password: _password, ...safe } = user;
     return safe;
   }

@@ -63,6 +63,10 @@ export class UsersService {
   async createOne(dto: CreateUserDto): Promise<PublicUser> {
     const existing = await this.repo.findOneBy({ username: dto.username });
     if (existing) throw new BadRequestException('用户名已存在');
+    const existingPhone = dto.phone
+      ? await this.repo.findOneBy({ phone: dto.phone })
+      : null;
+    if (existingPhone) throw new BadRequestException('手机号已存在');
     const saved = await this.repo.save(
       this.repo.create({
         username: dto.username,
@@ -80,14 +84,19 @@ export class UsersService {
   async updateOne(id: number, dto: UpdateUserDto): Promise<PublicUser> {
     const existing = await this.repo.findOneBy({ id });
     if (!existing) throw new NotFoundException('用户不存在');
+    if (dto.username && dto.username !== existing.username) {
+      const dup = await this.repo.findOneBy({ username: dto.username });
+      if (dup) throw new BadRequestException('用户名已存在');
+    }
     await this.repo.update(id, {
+      username: dto.username ?? existing.username,
       email: dto.email ?? null,
-      phone: dto.phone ?? null,
+      phone: dto.phone ?? existing.phone,
       role: dto.role || existing.role,
       status: dto.status || existing.status,
       password: dto.password ? this.authService.hashPassword(dto.password) : existing.password,
     });
-    this.logger.log('编辑用户', existing.username);
+    this.logger.log('编辑用户', dto.username ?? existing.username);
     return this.toPublic(await this.repo.findOneByOrFail({ id }));
   }
 
