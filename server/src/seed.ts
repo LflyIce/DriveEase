@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import dayjs from 'dayjs';
 import { NestFactory } from '@nestjs/core';
 import { DataSource } from 'typeorm';
 import { AppModule } from './app.module';
@@ -28,7 +29,65 @@ async function seed(): Promise<void> {
     await q('DELETE FROM compulsory_insurance_type');
     await q('DELETE FROM commercial_insurance_type');
     await q('DELETE FROM user');
+    await q('DELETE FROM role_permission');
+    await q('DELETE FROM permission');
+    await q('DELETE FROM role');
     await q('DELETE FROM sqlite_sequence');
+
+    // 角色 + 权限 + 默认分配（RBAC）
+    await q("INSERT INTO role (name, code, is_built_in, description) VALUES ('管理员', 'admin', 1, '超级角色，拥有全部权限，不可删除')");
+    await q("INSERT INTO role (name, code, is_built_in, description) VALUES ('普通员工', 'staff', 0, '默认员工角色')");
+    const adminRoleId = ((await q("SELECT id FROM role WHERE code='admin'")) as any[])[0].id;
+    const staffRoleId = ((await q("SELECT id FROM role WHERE code='staff'")) as any[])[0].id;
+
+    // 权限项：菜单（11）+ 敏感操作（17），与前端路由 menuCode / 按钮 v-access 标注一一对应
+    const perms: Array<[string, string, string, string, number]> = [
+      ['menu:dashboard', '仪表盘', 'menu', 'dashboard', 1],
+      ['menu:customers', '客户管理', 'menu', 'customers', 2],
+      ['menu:vehicles', '车辆管理', 'menu', 'vehicles', 3],
+      ['menu:policies', '保单管理', 'menu', 'policies', 4],
+      ['menu:insurance-companies', '保险公司', 'menu', 'insurance-companies', 5],
+      ['menu:compulsory-insurances', '交强险', 'menu', 'compulsory-insurances', 6],
+      ['menu:commercial-insurances', '商业险', 'menu', 'commercial-insurances', 7],
+      ['menu:renewals', '续保管理', 'menu', 'renewals', 8],
+      ['menu:users', '用户管理', 'menu', 'users', 9],
+      ['menu:logs', '操作日志', 'menu', 'logs', 10],
+      ['menu:rbac', '角色权限', 'menu', 'rbac', 11],
+      ['customer:create', '客户新增', 'action', 'customer', 1],
+      ['customer:update', '客户编辑', 'action', 'customer', 2],
+      ['customer:delete', '客户删除', 'action', 'customer', 3],
+      ['vehicle:create', '车辆新增', 'action', 'vehicle', 1],
+      ['vehicle:update', '车辆编辑', 'action', 'vehicle', 2],
+      ['vehicle:delete', '车辆删除', 'action', 'vehicle', 3],
+      ['policy:create', '保单新增', 'action', 'policy', 1],
+      ['policy:update', '保单编辑', 'action', 'policy', 2],
+      ['policy:delete', '保单删除', 'action', 'policy', 3],
+      ['policy:activate', '保单激活', 'action', 'policy', 4],
+      ['policy:surrender', '保单退保', 'action', 'policy', 5],
+      ['renewal:create', '续保新增', 'action', 'renewal', 1],
+      ['renewal:delete', '续保删除', 'action', 'renewal', 2],
+      ['renewal:renew', '续保办理', 'action', 'renewal', 3],
+      ['user:create', '用户新增', 'action', 'users', 1],
+      ['user:update', '用户编辑', 'action', 'users', 2],
+      ['user:delete', '用户删除', 'action', 'users', 3],
+      ['rbac:manage', '角色权限管理', 'action', 'rbac', 1],
+    ];
+    for (const [code, name, type, module, sort] of perms) {
+      await q('INSERT INTO permission (code, name, type, module, sort) VALUES (?, ?, ?, ?, ?)', [code, name, type, module, sort]);
+    }
+
+    // 管理员：全部权限（超级角色，运行时 Guard 也会短路放行）
+    const allPermIds = (await q('SELECT id FROM permission')) as any[];
+    for (const p of allPermIds) {
+      await q('INSERT INTO role_permission (role_id, permission_id) VALUES (?, ?)', [adminRoleId, p.id]);
+    }
+    // 普通员工：排除管理类菜单（用户/日志/rbac/三个参照表）+ user:* / rbac:* 操作；其余默认放开，管理员可在 UI 收紧
+    const staffPerms = (await q(
+      "SELECT id FROM permission WHERE code NOT IN ('menu:users','menu:logs','menu:rbac','menu:insurance-companies','menu:compulsory-insurances','menu:commercial-insurances') AND code NOT LIKE 'user:%' AND code NOT LIKE 'rbac:%'",
+    )) as any[];
+    for (const p of staffPerms) {
+      await q('INSERT INTO role_permission (role_id, permission_id) VALUES (?, ?)', [staffRoleId, p.id]);
+    }
 
     // 用户（密码均为 123456）
     const pwdHash = hashPassword('123456');
@@ -40,9 +99,10 @@ async function seed(): Promise<void> {
       ['zhaoliu', 'zhaoliu@insurance.com', '13800000005', '普通员工', '禁用'],
     ];
     for (const [username, email, phone, role, status] of users) {
+      const roleId = role === '管理员' ? adminRoleId : staffRoleId;
       await q(
-        'INSERT INTO user (username, password, email, phone, role, status) VALUES (?, ?, ?, ?, ?, ?)',
-        [username, pwdHash, email, phone, role, status],
+        'INSERT INTO user (username, password, email, phone, role, role_id, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [username, pwdHash, email, phone, role, roleId, status],
       );
     }
 
@@ -126,11 +186,13 @@ async function seed(): Promise<void> {
       );
     }
 
-    // 续保记录
+    // 续保记录：remind_date 相对今天动态生成（+5/+15/+25 天），status ∈ {待提醒,已提醒}，
+    // 确保落在工作台「未来 30 天」窗口内（findUpcoming: remind_date BETWEEN today AND today+30）。
+    const inDays = (n: number) => dayjs().add(n, 'day').format('YYYY-MM-DD');
     const renewals = [
-      [1, '2025-05-01', '已提醒', '张三的帕萨特综合险即将到期'],
-      [2, '2025-07-15', '待提醒', '李四的凯美瑞商业险即将到期'],
-      [5, '2025-02-01', '已过期', '赵六的奔驰C级综合险已过期'],
+      [1, inDays(5), '待提醒', '张三的帕萨特综合险即将到期'],
+      [2, inDays(15), '待提醒', '李四的凯美瑞商业险即将到期'],
+      [5, inDays(25), '已提醒', '赵六的奔驰C级综合险即将到期'],
     ];
     for (const [oldPolicyId, remindDate, status, note] of renewals) {
       await q('INSERT INTO renewal_record (old_policy_id, remind_date, status, note) VALUES (?, ?, ?, ?)', [

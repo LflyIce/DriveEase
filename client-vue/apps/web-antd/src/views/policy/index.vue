@@ -13,8 +13,9 @@ import dayjs from 'dayjs';
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { deletePolicy, getPolicyList, updatePolicyStatus } from '#/api/policy';
 
-import DetailDrawer from './modules/detail.vue';
 import { useColumns, useGridFormSchema } from './data';
+import DetailDrawer from './modules/detail.vue';
+import EditDrawer from './modules/edit.vue';
 
 defineOptions({ name: 'Policy' });
 
@@ -43,6 +44,7 @@ function policyNumberColor(row: PolicyApi.Policy): string | undefined {
 }
 
 const detailRef = ref();
+const editRef = ref();
 
 /** 到期快捷筛选窗口（天）：undefined=不过滤；30=月内到期；10=10日内到期 */
 const expiryWithin = ref<number | undefined>();
@@ -83,6 +85,10 @@ function onView(row: PolicyApi.Policy) {
   detailRef.value?.show(row.id);
 }
 
+function onEdit(row: PolicyApi.Policy) {
+  editRef.value?.show(row.id!);
+}
+
 function onActivate(row: PolicyApi.Policy) {
   updatePolicyStatus(row.id!, '生效').then(() => {
     message.success('已激活');
@@ -108,6 +114,7 @@ function onDelete(row: PolicyApi.Policy) {
 <template>
   <Page auto-content-height>
     <DetailDrawer ref="detailRef" />
+    <EditDrawer ref="editRef" @success="() => gridApi.query()" />
 
     <Grid>
       <template #toolbar-actions>
@@ -147,8 +154,10 @@ function onDelete(row: PolicyApi.Policy) {
 
       <template #action="{ row }">
         <Button type="link" @click="onView(row)">查看</Button>
+        <Button v-access:code="['policy:update']" type="link" @click="onEdit(row)">编辑</Button>
         <Button
           v-if="row.status === '待生效'"
+          v-access:code="['policy:activate']"
           type="link"
           @click="onActivate(row)"
         >
@@ -156,13 +165,14 @@ function onDelete(row: PolicyApi.Policy) {
         </Button>
         <Button
           v-if="row.status === '生效'"
+          v-access:code="['policy:surrender']"
           type="link"
           danger
           @click="onSurrender(row)"
         >
           退保
         </Button>
-        <Popconfirm title="确认删除该保单？" @confirm="onDelete(row)">
+        <Popconfirm v-access:code="['policy:delete']" title="确认删除该保单？" @confirm="onDelete(row)">
           <Button type="link" danger>删除</Button>
         </Popconfirm>
       </template>

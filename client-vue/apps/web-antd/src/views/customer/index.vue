@@ -70,15 +70,15 @@ function onRefresh() {
 
     <Grid table-title="客户管理">
       <template #toolbar-tools>
-        <Button type="primary" @click="onCreate">
+        <Button v-access:code="['customer:create']" type="primary" @click="onCreate">
           <Plus class="size-5" />
           新建客户
         </Button>
       </template>
 
       <template #action="{ row }">
-        <Button type="link" @click="onEdit(row)">编辑</Button>
-        <Popconfirm title="确认删除该客户？" @confirm="onDelete(row)">
+        <Button v-access:code="['customer:update']" type="link" @click="onEdit(row)">编辑</Button>
+        <Popconfirm v-access:code="['customer:delete']" title="确认删除该客户？" @confirm="onDelete(row)">
           <Button type="link" danger>删除</Button>
         </Popconfirm>
       </template>

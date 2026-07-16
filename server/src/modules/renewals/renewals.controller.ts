@@ -1,5 +1,6 @@
 import { Body, Controller, Get, HttpCode, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { QueryRenewalDto } from './dto/query-renewal.dto';
 import { CreateRenewalDto } from './dto/create-renewal.dto';
 import { UpdateRenewalDto } from './dto/update-renewal.dto';
@@ -27,12 +28,14 @@ export class RenewalsController {
   @Post()
   @HttpCode(200)
   @ApiOperation({ summary: '新增续保记录' })
+  @RequirePermissions('renewal:create')
   create(@Body() dto: CreateRenewalDto) {
     return this.renewalsService.createOne(dto);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: '更新续保记录（状态/备注）' })
+  @RequirePermissions('renewal:renew')
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateRenewalDto) {
     return this.renewalsService.updateOne(id, dto);
   }
@@ -40,6 +43,7 @@ export class RenewalsController {
   @Post(':id/renew')
   @HttpCode(200)
   @ApiOperation({ summary: '续保：克隆旧保单生成新保单' })
+  @RequirePermissions('renewal:renew')
   renew(@Param('id', ParseIntPipe) id: number, @Body() body: RenewDto) {
     return this.renewalsService.renew(id, body);
   }

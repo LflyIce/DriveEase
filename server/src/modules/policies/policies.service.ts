@@ -132,41 +132,64 @@ export class PoliciesService {
 
   async updateOne(id: number, dto: UpdatePolicyDto): Promise<any> {
     const existingRows = (await this.dataSource.query('SELECT * FROM policy WHERE id = ?', [id])) as any[];
-    const existing = existingRows[0];
-    if (!existing) throw new NotFoundException('保单不存在');
-    const resolvedStartDate = dto.effectiveDate || dto.startDate || null;
-    const resolvedEndDate = dto.expiryDate || dto.endDate || null;
+    const e = existingRows[0];
+    if (!e) throw new NotFoundException('保单不存在');
+
+    // 编辑只改保单自身字段：不动 customer_id/vehicle_id（归属）；未暴露字段（开单时间/证件/明细）不在 SET，保留原值。
+    // 每字段 existing 兜底（dto.x !== undefined ? dto.x : e.x），避免未传值被写成 null；不用 || 以免合法 0 被吞。
+    const pick = (val: any, fallback: any) => (val !== undefined ? val : fallback);
+    // 日期双写（与 createOne 对齐）：起保/生效/开始 = 投保日；到期/结束 = 到期日
+    const policyDate = pick(dto.policyDate, e.policy_date) ?? null;
+    const expiryDate = pick(dto.expiryDate, e.expiry_date) ?? null;
+
     await this.dataSource.query(
-      `UPDATE policy SET policy_number=?, customer_id=?, vehicle_id=?, insurance_type=?, premium=?, sum_insured=?,
-       issue_time=?, policy_date=?, effective_date=?, expiry_date=?, start_date=?, end_date=?,
-       certificate_type=?, certificate_number=?, insurance_company=?, contact_person=?, contact_phone=?, sales_person=?,
-       compulsory_detail=?, commercial_detail=?, status=?, remark=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+      `UPDATE policy SET
+         policy_number=?, insurance_type=?, premium=?, sum_insured=?,
+         policy_date=?, effective_date=?, expiry_date=?, start_date=?, end_date=?,
+         insurance_company=?, contact_person=?, contact_phone=?, sales_person=?,
+         status=?, remark=?,
+         traffic_premium=?, travel_tax=?, commercial_premium=?, surcharge_premium=?, surcharge_premium2=?,
+         commission=?, expenses=?,
+         traffic_rate=?, traffic_charge=?, commercial_rate=?, commercial_charge=?,
+         surcharge_rate=?, surcharge_charge=?, surcharge_rate2=?, surcharge_charge2=?,
+         total_charge=?, updated_at=CURRENT_TIMESTAMP
+       WHERE id=?`,
       [
-        dto.policyNumber || existing.policy_number,
-        dto.customerId,
-        dto.vehicleId,
-        dto.insuranceType,
-        dto.premium,
-        dto.sumInsured,
-        dto.issueTime || existing.issue_time || null,
-        dto.policyDate || existing.policy_date || null,
-        resolvedStartDate,
-        resolvedEndDate,
-        resolvedStartDate,
-        resolvedEndDate,
-        dto.certificateType || null,
-        dto.certificateNumber || null,
-        dto.insuranceCompany || null,
-        dto.contactPerson || null,
-        dto.contactPhone || null,
-        dto.salesPerson || null,
-        dto.compulsoryDetail ? JSON.stringify(dto.compulsoryDetail) : null,
-        dto.commercialDetail ? JSON.stringify(dto.commercialDetail) : null,
-        dto.status || existing.status,
-        dto.remark || null,
+        pick(dto.policyNumber, e.policy_number),
+        pick(dto.insuranceType, e.insurance_type),
+        pick(dto.premium, e.premium),
+        pick(dto.sumInsured, e.sum_insured),
+        policyDate,
+        policyDate,
+        expiryDate,
+        policyDate,
+        expiryDate,
+        pick(dto.insuranceCompany, e.insurance_company) ?? null,
+        pick(dto.contactPerson, e.contact_person) ?? null,
+        pick(dto.contactPhone, e.contact_phone) ?? null,
+        pick(dto.salesPerson, e.sales_person) ?? null,
+        pick(dto.status, e.status),
+        pick(dto.remark, e.remark) ?? null,
+        pick(dto.trafficPremium, e.traffic_premium),
+        pick(dto.travelTax, e.travel_tax),
+        pick(dto.commercialPremium, e.commercial_premium),
+        pick(dto.surchargePremium, e.surcharge_premium),
+        pick(dto.surchargePremium2, e.surcharge_premium2),
+        pick(dto.commission, e.commission),
+        pick(dto.expenses, e.expenses),
+        pick(dto.trafficRate, e.traffic_rate),
+        pick(dto.trafficCharge, e.traffic_charge),
+        pick(dto.commercialRate, e.commercial_rate),
+        pick(dto.commercialCharge, e.commercial_charge),
+        pick(dto.surchargeRate, e.surcharge_rate),
+        pick(dto.surchargeCharge, e.surcharge_charge),
+        pick(dto.surchargeRate2, e.surcharge_rate2),
+        pick(dto.surchargeCharge2, e.surcharge_charge2),
+        pick(dto.totalCharge, e.total_charge),
         id,
       ],
     );
+    this.logger.log('编辑保单', e.policy_number);
     const rows = (await this.dataSource.query('SELECT * FROM policy WHERE id = ?', [id])) as any[];
     return rows[0];
   }

@@ -1,33 +1,46 @@
 import type { RouteRecordRaw } from 'vue-router';
 
 /**
- * DriveEase 业务菜单（对应原 React 端的 10 个页面）。
- * 保单查询（列表 + 详情抽屉 + 激活/退保/删除）、保单录入（客户+车辆+保费一体表单）均已实现。
+ * DriveEase 业务菜单（对应业务页面）。
+ * meta.menuCode 对应后端权限码（menu:*），guard.ts 据当前用户 accessCodes 过滤可见性；
+ * 无 menuCode 的路由（未来扩展的详情页等）默认所有登录用户可见。
  */
+declare module 'vue-router' {
+  interface RouteMeta {
+    menuCode?: string;
+  }
+}
+
 const routes: RouteRecordRaw[] = [
   {
     path: '/dashboard',
     name: 'Dashboard',
     component: () => import('#/views/dashboard/index.vue'),
-    meta: { title: '仪表盘', icon: 'lucide:layout-dashboard', order: 1 },
+    meta: {
+      hideInTab: true,
+      icon: 'lucide:layout-dashboard',
+      menuCode: 'menu:dashboard',
+      order: 1,
+      title: '仪表盘',
+    },
   },
   {
     path: '/customers',
     name: 'Customer',
     component: () => import('#/views/customer/index.vue'),
-    meta: { title: '客户管理', icon: 'lucide:users', order: 2 },
+    meta: { title: '客户管理', icon: 'lucide:users', menuCode: 'menu:customers', order: 2 },
   },
   {
     path: '/vehicles',
     name: 'Vehicle',
     component: () => import('#/views/vehicle/index.vue'),
-    meta: { title: '车辆管理', icon: 'lucide:car', order: 3 },
+    meta: { title: '车辆管理', icon: 'lucide:car', menuCode: 'menu:vehicles', order: 3 },
   },
   {
     path: '/policies',
     name: 'Policy',
     redirect: '/policies/query',
-    meta: { title: '保单管理', icon: 'lucide:file-text', order: 4 },
+    meta: { title: '保单管理', icon: 'lucide:file-text', menuCode: 'menu:policies', order: 4 },
     children: [
       {
         path: 'query',
@@ -47,37 +60,43 @@ const routes: RouteRecordRaw[] = [
     path: '/insurance-companies',
     name: 'InsuranceCompany',
     component: () => import('#/views/insurance-company/index.vue'),
-    meta: { title: '保险公司管理', icon: 'lucide:building-2', order: 5 },
+    meta: { title: '保险公司管理', icon: 'lucide:building-2', menuCode: 'menu:insurance-companies', order: 5 },
   },
   {
     path: '/compulsory-insurances',
     name: 'CompulsoryInsurance',
     component: () => import('#/views/compulsory-insurance/index.vue'),
-    meta: { title: '交强险管理', icon: 'lucide:shield-check', order: 6 },
+    meta: { title: '交强险管理', icon: 'lucide:shield-check', menuCode: 'menu:compulsory-insurances', order: 6 },
   },
   {
     path: '/commercial-insurances',
     name: 'CommercialInsurance',
     component: () => import('#/views/commercial-insurance/index.vue'),
-    meta: { title: '商业险管理', icon: 'lucide:shield', order: 7 },
+    meta: { title: '商业险管理', icon: 'lucide:shield', menuCode: 'menu:commercial-insurances', order: 7 },
   },
   {
     path: '/renewals',
     name: 'Renewal',
     component: () => import('#/views/renewal/index.vue'),
-    meta: { title: '续保管理', icon: 'lucide:refresh-cw', order: 8 },
+    meta: { title: '续保管理', icon: 'lucide:refresh-cw', menuCode: 'menu:renewals', order: 8 },
   },
   {
     path: '/users',
     name: 'User',
     component: () => import('#/views/user/index.vue'),
-    meta: { title: '用户管理', icon: 'lucide:user-cog', order: 9 },
+    meta: { title: '用户管理', icon: 'lucide:user-cog', menuCode: 'menu:users', order: 9 },
   },
   {
     path: '/logs',
     name: 'Log',
     component: () => import('#/views/log/index.vue'),
-    meta: { title: '操作日志', icon: 'lucide:file-search', order: 10 },
+    meta: { title: '操作日志', icon: 'lucide:file-search', menuCode: 'menu:logs', order: 10 },
+  },
+  {
+    path: '/rbac',
+    name: 'Rbac',
+    component: () => import('#/views/rbac/index.vue'),
+    meta: { title: '角色权限', icon: 'lucide:shield', menuCode: 'menu:rbac', order: 11 },
   },
 ];
 

@@ -107,6 +107,33 @@ export async function initSchema(dataSource: DataSource): Promise<void> {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  // RBAC：user 关联 role（role_id）；保留旧 role 列作显示兼容，权限一律走 role_id
+  await ensureColumn(dataSource, 'user', 'role_id', 'INTEGER');
+
+  await q(`
+    CREATE TABLE IF NOT EXISTS role (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE, code TEXT NOT NULL UNIQUE,
+      is_built_in INTEGER NOT NULL DEFAULT 0, description TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await q(`
+    CREATE TABLE IF NOT EXISTS permission (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL UNIQUE, name TEXT NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('menu', 'action')), module TEXT, sort INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await q(`
+    CREATE TABLE IF NOT EXISTS role_permission (
+      role_id INTEGER NOT NULL, permission_id INTEGER NOT NULL,
+      PRIMARY KEY (role_id, permission_id),
+      FOREIGN KEY (role_id) REFERENCES role(id),
+      FOREIGN KEY (permission_id) REFERENCES permission(id)
+    )
+  `);
   await q(`
     CREATE TABLE IF NOT EXISTS operation_log (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

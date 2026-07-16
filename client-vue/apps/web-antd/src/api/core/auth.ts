@@ -1,13 +1,12 @@
 import { requestClient } from '#/api/request';
 
 /**
- * DriveEase 账号体系对接（无 token 模式，镜像原 React 端行为）：
- * - 后端 POST /api/users/login 校验账号密码后直接返回 user 对象，不签发 token；
- * - 这里伪造一个固定 token 仅用于满足 vben accessStore 的守门逻辑；
- * - 登录成功的 user 缓存到 localStorage，供 getUserInfoApi 读取（后端无 /user/info）。
+ * DriveEase 账号体系（JWT 模式）：
+ * - 后端 POST /api/users/login 校验密码后返回 { ...user, accessToken }（签发 JWT）；
+ * - 这里把 accessToken 返回给 vben accessStore；user 缓存到 localStorage 供 getUserInfoApi 读取；
+ * - request.ts 已在每个请求带 Authorization: Bearer <accessToken>。
  */
 const USER_STORAGE_KEY = 'driveease_user';
-const FAKE_TOKEN = 'driveease-fake-token';
 
 export namespace AuthApi {
   /** 登录接口参数 */
@@ -28,31 +27,50 @@ export namespace AuthApi {
 }
 
 /**
- * 登录
+ * 登录：后端返回 { ...user, accessToken }，拆出 token 给 accessStore，user 落 localStorage。
  */
+interface LoginResponse {
+  accessToken: string;
+  [key: string]: any;
+}
+
 export async function loginApi(data: AuthApi.LoginParams) {
-  const user = await requestClient.post('/users/login', data);
+  const result = await requestClient.post<LoginResponse>('/users/login', data);
+  const { accessToken, ...user } = result;
   localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-  return { accessToken: FAKE_TOKEN } as AuthApi.LoginResult;
+  return { accessToken } as AuthApi.LoginResult;
 }
 
-/**
- * 刷新 accessToken（后端无此能力，保持占位）
- */
+/** 后端未实现 refresh；preferences 已关 enableRefreshToken，401 直接走重新认证（登出）。 */
 export async function refreshTokenApi(): Promise<AuthApi.RefreshTokenResult> {
-  return { data: FAKE_TOKEN, status: 200 };
+  return { data: '', status: 200 };
 }
 
-/**
- * 退出登录（清理本地缓存即可，不调用后端）
- */
+/** 退出登录（清理本地缓存即可，不调用后端） */
 export async function logoutApi() {
   localStorage.removeItem(USER_STORAGE_KEY);
 }
 
-/**
- * 获取用户权限码（后端无细粒度权限，返回空）
- */
+/** /auth/me 返回结构（当前用户 + roleCode + 权限码集） */
+export interface MeResult {
+  email?: string;
+  id: number;
+  phone?: string;
+  permissions: string[];
+  role: string;
+  roleCode: null | string;
+  roleId: null | number;
+  status: string;
+  username: string;
+}
+
+/** 取当前登录用户信息 + 权限码集（getUserInfoApi 与 getAccessCodesApi 共用） */
+export async function fetchMeApi(): Promise<MeResult> {
+  return requestClient.get<MeResult>('/auth/me');
+}
+
+/** 取当前用户权限码集（供 vben accessStore.setAccessCodes，菜单/按钮过滤依据） */
 export async function getAccessCodesApi(): Promise<string[]> {
-  return [];
+  const me = await fetchMeApi();
+  return me.permissions;
 }

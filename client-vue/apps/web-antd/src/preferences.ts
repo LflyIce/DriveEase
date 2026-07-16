@@ -20,6 +20,7 @@ export const overridesPreferences = defineOverridesPreferences({
   // overrides
   app: {
     defaultHomePath: '/dashboard',
+    enableRefreshToken: false, // 后端未实现 refresh，401 直接重新认证（登出跳登录）
     locale: 'zh-CN',
     name: import.meta.env.VITE_APP_TITLE,
   },

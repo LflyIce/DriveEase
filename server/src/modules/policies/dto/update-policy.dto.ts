@@ -24,4 +24,22 @@ export class UpdatePolicyDto {
   @ApiPropertyOptional() @IsOptional() compulsoryDetail?: any;
   @ApiPropertyOptional() @IsOptional() commercialDetail?: any;
   @ApiPropertyOptional() @IsOptional() remark?: string;
+  // 保费拆分（编辑保单时与录入同口径，可改）
+  @ApiPropertyOptional() @IsOptional() trafficPremium?: number;
+  @ApiPropertyOptional() @IsOptional() travelTax?: number;
+  @ApiPropertyOptional() @IsOptional() commercialPremium?: number;
+  @ApiPropertyOptional() @IsOptional() surchargePremium?: number;
+  @ApiPropertyOptional() @IsOptional() surchargePremium2?: number;
+  // 手续费与支出
+  @ApiPropertyOptional() @IsOptional() commission?: number;
+  @ApiPropertyOptional() @IsOptional() expenses?: number;
+  @ApiPropertyOptional() @IsOptional() trafficRate?: number;
+  @ApiPropertyOptional() @IsOptional() trafficCharge?: number;
+  @ApiPropertyOptional() @IsOptional() commercialRate?: number;
+  @ApiPropertyOptional() @IsOptional() commercialCharge?: number;
+  @ApiPropertyOptional() @IsOptional() surchargeRate?: number;
+  @ApiPropertyOptional() @IsOptional() surchargeCharge?: number;
+  @ApiPropertyOptional() @IsOptional() surchargeRate2?: number;
+  @ApiPropertyOptional() @IsOptional() surchargeCharge2?: number;
+  @ApiPropertyOptional() @IsOptional() totalCharge?: number;
 }

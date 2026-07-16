@@ -42,13 +42,11 @@ export class StatsService {
       one(
         "SELECT COALESCE(SUM(sum_insured), 0) as count FROM policy WHERE status <> '已退保'",
       ),
-      // 员工开单数（按 sales_person）
-      this.dataSource.query(
-        "SELECT COALESCE(NULLIF(sales_person, ''), '未分配') AS name, COUNT(*) AS value FROM policy WHERE status <> '已退保' GROUP BY sales_person ORDER BY value DESC",
-      ),
+      // 员工开单数：以启用员工为基准（含 0 单）+ 末尾「未分配」行
+      this.getEmployeeRanking(),
       // 车辆类型（JOIN vehicle）
       this.dataSource.query(
-        "SELECT COALESCE(NULLIF(v.vehicle_type, ''), '未分类') AS name, COUNT(*) AS value FROM policy p JOIN vehicle v ON v.id = p.vehicle_id WHERE p.status <> '已退保' GROUP BY v.vehicle_type ORDER BY value DESC",
+        "SELECT COALESCE(NULLIF(v.vehicle_type, ''), '未分类') AS name, COUNT(*) AS value FROM policy p JOIN vehicle v ON v.id = p.vehicle_id WHERE p.status <> '已退保' GROUP BY v.vehicle_type",
       ),
       // 险种占比（按保单数）
       this.dataSource.query(
@@ -60,7 +58,7 @@ export class StatsService {
       ),
       // 保费趋势（近 6 个月，按月）
       this.dataSource.query(
-        "SELECT strftime('%Y-%m', policy_date) AS month, COALESCE(SUM(premium), 0) AS premium FROM policy WHERE policy_date >= ? AND status <> '已退保' GROUP BY month ORDER BY month",
+        "SELECT strftime('%Y-%m', policy_date) AS month, COALESCE(SUM(premium), 0) AS premium FROM policy WHERE policy_date >= ? AND status <> '已退保' GROUP BY month",
         [trendStart],
       ),
     ]);
@@ -84,5 +82,31 @@ export class StatsService {
         premium: Number(r.premium) || 0,
       })),
     };
+  }
+
+  /**
+   * 员工开单数：以「启用用户」为基准 LEFT JOIN policy，0 单员工也列出；
+   * 末尾追加一行「未分配」（sales_person 为空 / 业务员不在启用用户表），
+   * 避免这些保单凭空消失、总数对不上。排序：员工按 value DESC，「未分配」恒定垫底。
+   */
+  private async getEmployeeRanking(): Promise<
+    { name: string; value: number }[]
+  > {
+    const rows = (await this.dataSource.query(
+      `SELECT name, value FROM (
+         SELECT u.username AS name, COUNT(p.id) AS value, 0 AS sort_grp
+         FROM user u
+         LEFT JOIN policy p ON p.sales_person = u.username AND p.status <> '已退保'
+         WHERE u.status = '启用'
+         GROUP BY u.id, u.username
+         UNION ALL
+         SELECT '未分配' AS name, COUNT(*) AS value, 1 AS sort_grp
+         FROM policy p
+         WHERE p.status <> '已退保'
+           AND ( p.sales_person IS NULL OR p.sales_person = ''
+                 OR p.sales_person NOT IN (SELECT username FROM user WHERE status = '启用') )
+       ) `,
+    )) as any[];
+    return rows.map((r) => ({ name: r.name, value: Number(r.value) || 0 }));
   }
 }

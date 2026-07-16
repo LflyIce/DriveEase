@@ -1,14 +1,41 @@
-import type { Router } from 'vue-router';
+import type { RouteRecordRaw, Router } from 'vue-router';
 
 import { LOGIN_PATH } from '@vben/constants';
 import { preferences } from '@vben/preferences';
 import { useAccessStore, useUserStore } from '@vben/stores';
 import { startProgress, stopProgress } from '@vben/utils';
 
+import { getAccessCodesApi } from '#/api';
 import { accessRoutes, coreRouteNames } from '#/router/routes';
 import { useAuthStore } from '#/store';
 
 import { generateAccess } from './access';
+
+/**
+ * 按当前用户权限码过滤路由：
+ * - meta.menuCode 存在 → 需 accessCodes 含该码才保留（菜单不可见 + 路由不可达）；
+ * - 无 menuCode → 默认保留（首页、详情子页等）。
+ * 管理员 accessCodes 为全部权限码，故全部保留。
+ */
+function filterRoutesByAccessCodes(
+  routes: RouteRecordRaw[],
+  codes: Set<string>,
+): RouteRecordRaw[] {
+  const result: RouteRecordRaw[] = [];
+  for (const route of routes) {
+    const menuCode = route.meta?.menuCode as undefined | string;
+    if (menuCode && !codes.has(menuCode)) continue;
+    if (route.children?.length) {
+      result.push({
+        ...route,
+        children: filterRoutesByAccessCodes(route.children, codes),
+      });
+    } else {
+      result.push(route);
+    }
+  }
+  return result;
+}
 
 /**
  * 通用守卫配置
@@ -95,12 +122,21 @@ function setupAccessGuard(router: Router) {
     const userInfo = userStore.userInfo || (await authStore.fetchUserInfo());
     const userRoles = userInfo.roles ?? [];
 
+    // 确保权限码已加载：登录流程已 setAccessCodes；刷新页面 store 重置，这里补一次
+    if (!accessStore.accessCodes || accessStore.accessCodes.length === 0) {
+      accessStore.setAccessCodes(await getAccessCodesApi());
+    }
+    const accessCodes = new Set(accessStore.accessCodes ?? []);
+
+    // 按权限码过滤后再生成菜单/路由（无 menuCode 的路由默认保留）
+    const filteredRoutes = filterRoutesByAccessCodes(accessRoutes, accessCodes);
+
     // 生成菜单和路由
     const { accessibleMenus, accessibleRoutes } = await generateAccess({
       roles: userRoles,
       router,
       // 则会在菜单中显示，但是访问会被重定向到403
-      routes: accessRoutes,
+      routes: filteredRoutes,
     });
 
     // 保存菜单信息和路由信息

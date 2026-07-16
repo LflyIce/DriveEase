@@ -98,7 +98,7 @@ export function useColumns(): VxeTableGridColumns {
       fixed: 'right',
       slots: { default: 'action' },
       title: '操作',
-      width: 200,
+      width: 260,
     },
   ];
 }
@@ -398,5 +398,59 @@ export function useRemarkSchema(): VbenFormSchema[] {
       formItemClass: 'cols-span-full',
       label: '备注',
     },
+  ];
+}
+
+/** 险种下拉（与后端 policy.insurance_type CHECK 约束一致） */
+const INSURANCE_TYPE_OPTIONS = [
+  { label: '交强险', value: '交强险' },
+  { label: '商业险', value: '商业险' },
+  { label: '综合', value: '综合' },
+];
+
+/**
+ * 编辑抽屉-基础信息分组（保单自身基础字段）。
+ * 客户/车辆不在编辑范围（归属不变）；保单号系统生成，disabled 只读。
+ * 保险公司/日期/保费拆分在 usePremiumSchema，手续费在 useChargeSchema，备注在 useRemarkSchema。
+ */
+export function useEditBaseSchema(): VbenFormSchema[] {
+  return [
+    {
+      component: 'Input',
+      componentProps: { disabled: true },
+      fieldName: 'policyNumber',
+      label: '保单号',
+    },
+    {
+      component: 'Select',
+      componentProps: { options: STATUS_OPTIONS, placeholder: '请选择状态' },
+      fieldName: 'status',
+      label: '状态',
+    },
+    {
+      component: 'Select',
+      componentProps: { options: INSURANCE_TYPE_OPTIONS, placeholder: '请选择险种' },
+      fieldName: 'insuranceType',
+      label: '险种',
+    },
+    {
+      component: 'InputNumber',
+      componentProps: { min: 0, style: 'width:100%' },
+      fieldName: 'sumInsured',
+      label: '保额',
+    },
+    {
+      component: 'ApiSelect',
+      componentProps: {
+        api: async () => (await getUserList({ page: 1, pageSize: 1000 })).items,
+        labelField: 'username',
+        placeholder: '请选择业务员',
+        valueField: 'username',
+      },
+      fieldName: 'salesPerson',
+      label: '业务员',
+    },
+    { component: 'Input', fieldName: 'contactPerson', label: '联系人' },
+    { component: 'Input', fieldName: 'contactPhone', label: '联系电话' },
   ];
 }

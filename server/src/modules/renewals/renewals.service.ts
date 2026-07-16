@@ -100,6 +100,8 @@ export class RenewalsService {
       this.renewalRepo.create({
         oldPolicyId: dto.oldPolicyId,
         remindDate: dto.remindDate,
+        // 显式设默认 status：@Column 字段 TypeORM 会显式插 NULL，覆盖 schema 的 DEFAULT '待提醒'
+        status: '待提醒',
         note: dto.note || null,
       }),
     );

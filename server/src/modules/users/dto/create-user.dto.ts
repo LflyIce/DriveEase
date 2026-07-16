@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateUserDto {
   @ApiProperty()
@@ -21,10 +21,15 @@ export class CreateUserDto {
   @IsNotEmpty({ message: '手机号不能为空' })
   phone: string;
 
-  @ApiPropertyOptional({ description: "'管理员' | '普通员工'" })
+  @ApiPropertyOptional({ description: "'管理员' | '普通员工'（显示用，传 roleId 后由后端按角色名回填）" })
   @IsOptional()
   @IsString()
   role?: string;
+
+  @ApiPropertyOptional({ description: '关联角色 id' })
+  @IsOptional()
+  @IsInt()
+  roleId?: number;
 
   @ApiPropertyOptional({ description: "'启用' | '禁用'" })
   @IsOptional()

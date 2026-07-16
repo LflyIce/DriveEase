@@ -63,14 +63,14 @@ function onRefresh() {
 
     <Grid table-title="用户管理">
       <template #toolbar-tools>
-        <Button type="primary" @click="onCreate">
+        <Button v-access:code="['user:create']" type="primary" @click="onCreate">
           <Plus class="size-5" />
           新建
         </Button>
       </template>
       <template #action="{ row }">
-        <Button type="link" @click="onEdit(row)">编辑</Button>
-        <Popconfirm title="确认删除该用户？" @confirm="onDelete(row)">
+        <Button v-access:code="['user:update']" type="link" @click="onEdit(row)">编辑</Button>
+        <Popconfirm v-access:code="['user:delete']" title="确认删除该用户？" @confirm="onDelete(row)">
           <Button type="link" danger>删除</Button>
         </Popconfirm>
       </template>

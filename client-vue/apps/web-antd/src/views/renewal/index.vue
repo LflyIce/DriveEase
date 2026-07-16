@@ -96,6 +96,7 @@ function onRenew(row: RenewalApi.Renewal) {
       <template #action="{ row }">
         <Popconfirm
           v-if="row.status === '待提醒' || row.status === '已提醒'"
+          v-access:code="['renewal:renew']"
           title="确认执行续保？将自动生成新保单。"
           @confirm="onRenew(row)"
         >

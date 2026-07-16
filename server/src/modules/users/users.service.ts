@@ -1,6 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { LogService } from '../../shared/audit/log.service';
 import { PaginatedResult } from '../../shared/dto/paginated-result';
 import { AuthService } from './auth.service';
@@ -14,6 +18,7 @@ export type PublicUser = Omit<User, 'password'>;
 export class UsersService {
   constructor(
     @InjectRepository(User) private readonly repo: Repository<User>,
+    @InjectDataSource() private readonly dataSource: DataSource,
     private readonly logger: LogService,
     private readonly authService: AuthService,
   ) {}
@@ -21,6 +26,16 @@ export class UsersService {
   private toPublic(u: User): PublicUser {
     const { password: _password, ...rest } = u;
     return rest;
+  }
+
+  /** 按 roleId 查角色显示名（role 列与 roleId 保持同步） */
+  private async resolveRoleName(roleId: null | number): Promise<string | null> {
+    if (roleId == null) return null;
+    const rows = (await this.dataSource.query(
+      'SELECT name FROM role WHERE id = ?',
+      [roleId],
+    )) as Array<{ name: string }>;
+    return rows[0]?.name ?? null;
   }
 
   async findMany(
@@ -51,7 +66,12 @@ export class UsersService {
       .skip((Number(page) - 1) * Number(pageSize))
       .take(Number(pageSize))
       .getManyAndCount();
-    return { data: rows.map((r) => this.toPublic(r)), total, page: Number(page), pageSize: Number(pageSize) };
+    return {
+      data: rows.map((r) => this.toPublic(r)),
+      total,
+      page: Number(page),
+      pageSize: Number(pageSize),
+    };
   }
 
   async findOneOrFail(id: number): Promise<PublicUser> {
@@ -67,13 +87,20 @@ export class UsersService {
       ? await this.repo.findOneBy({ phone: dto.phone })
       : null;
     if (existingPhone) throw new BadRequestException('手机号已存在');
+
+    const roleId = dto.roleId ?? null;
+    const roleName =
+      (roleId != null ? await this.resolveRoleName(roleId) : null) ||
+      dto.role ||
+      '普通员工';
     const saved = await this.repo.save(
       this.repo.create({
         username: dto.username,
         password: this.authService.hashPassword(dto.password || '123456'),
         email: dto.email ?? null,
         phone: dto.phone ?? null,
-        role: dto.role || '普通员工',
+        role: roleName,
+        roleId,
         status: dto.status || '启用',
       }),
     );
@@ -88,13 +115,24 @@ export class UsersService {
       const dup = await this.repo.findOneBy({ username: dto.username });
       if (dup) throw new BadRequestException('用户名已存在');
     }
+
+    const roleId = dto.roleId ?? existing.roleId;
+    let roleName = dto.role || existing.role;
+    if (dto.roleId != null) {
+      // 角色变了，按 roleId 回填显示名，保持 role 列与 roleId 同步
+      const resolved = await this.resolveRoleName(dto.roleId);
+      if (resolved) roleName = resolved;
+    }
     await this.repo.update(id, {
       username: dto.username ?? existing.username,
       email: dto.email ?? null,
       phone: dto.phone ?? existing.phone,
-      role: dto.role || existing.role,
+      role: roleName,
+      roleId,
       status: dto.status || existing.status,
-      password: dto.password ? this.authService.hashPassword(dto.password) : existing.password,
+      password: dto.password
+        ? this.authService.hashPassword(dto.password)
+        : existing.password,
     });
     this.logger.log('编辑用户', dto.username ?? existing.username);
     return this.toPublic(await this.repo.findOneByOrFail({ id }));
