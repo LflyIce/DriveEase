@@ -109,6 +109,8 @@ export async function initSchema(dataSource: DataSource): Promise<void> {
   `);
   // RBAC：user 关联 role（role_id）；保留旧 role 列作显示兼容，权限一律走 role_id
   await ensureColumn(dataSource, 'user', 'role_id', 'INTEGER');
+  // 仪表盘布局配置（JSON 字符串，per-user；见 auth.controller 的 /auth/me/dashboard-config）
+  await ensureColumn(dataSource, 'user', 'dashboard_config', 'TEXT');
 
   await q(`
     CREATE TABLE IF NOT EXISTS role (

@@ -197,6 +197,11 @@ export class FormApi {
                   return rawValues;
                 }),
               );
+              // 任一表单校验失败（结果为 undefined）→ 整体返回 undefined。
+              // 否则失败表单会被 Object.assign 静默丢弃，调用方拿到残缺 values 继续提交
+              if (results.some((r) => r === undefined)) {
+                return undefined;
+              }
               if (needMerge) {
                 const mergedResults = Object.assign({}, ...results);
                 return mergedResults;

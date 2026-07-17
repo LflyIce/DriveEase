@@ -12,6 +12,9 @@ export class User {
   @Column() role: string; // '管理员' | '普通员工'（显示兼容；权限一律走 roleId）
   @Column({ name: 'role_id', nullable: true }) roleId: number | null;
   @Column() status: string; // '启用' | '禁用'
+  /** 仪表盘布局配置（JSON 字符串；null = 用前端默认布局） */
+  @Column({ name: 'dashboard_config', nullable: true })
+  dashboardConfig: string | null;
 
   @Column({ name: 'created_at', insert: false }) createdAt: string;
   @Column({ name: 'updated_at', insert: false }) updatedAt: string;

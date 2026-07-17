@@ -230,7 +230,10 @@ export class PoliciesService {
       if (exist) customerId = exist.id;
     }
 
-    // 2. 车辆：录入页一车一保单——车牌必须不存在。提前校验，避免插了客户又抛错留孤儿行
+    // 2. 必填显式校验（提示准确；DB NOT NULL 兜底会按列序报错，可能错位成其他字段）
+    if (!b.name) throw new BadRequestException('客户名称为必填');
+    if (!b.phone) throw new BadRequestException('手机号码为必填');
+    // 车辆：录入页一车一保单——车牌必须不存在。提前校验，避免插了客户又抛错留孤儿行
     if (!b.plateNumber) throw new BadRequestException('车牌号为必填');
     const vehicleExist = await this.vehicleRepo.findOneBy({ plateNumber: b.plateNumber });
     if (vehicleExist) {

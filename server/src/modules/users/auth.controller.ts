@@ -1,6 +1,8 @@
-import { Controller, Get, Request } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Put, Request } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RbacService } from '../rbac/rbac.service';
+import { AuthService } from './auth.service';
+import { SaveDashboardConfigDto } from './dto/dashboard-config.dto';
 import { UsersService } from './users.service';
 
 /**
@@ -15,6 +17,7 @@ export class AuthController {
   constructor(
     private readonly usersService: UsersService,
     private readonly rbacService: RbacService,
+    private readonly authService: AuthService,
   ) {}
 
   @Get('me')
@@ -28,5 +31,18 @@ export class AuthController {
         ? await this.rbacService.listAllPermissionCodes()
         : await this.rbacService.getPermissionCodesByRoleId(user.roleId ?? null);
     return { ...user, roleCode, permissions };
+  }
+
+  @Get('me/dashboard-config')
+  @ApiOperation({ summary: '当前用户仪表盘布局配置（null = 用前端默认布局）' })
+  getDashboardConfig(@Request() req: any) {
+    return this.authService.getDashboardConfig(req.user.userId);
+  }
+
+  @Put('me/dashboard-config')
+  @HttpCode(200)
+  @ApiOperation({ summary: '保存当前用户仪表盘布局配置' })
+  saveDashboardConfig(@Request() req: any, @Body() dto: SaveDashboardConfigDto) {
+    return this.authService.saveDashboardConfig(req.user.userId, dto.layout);
   }
 }

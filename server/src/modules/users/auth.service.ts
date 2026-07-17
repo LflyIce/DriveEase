@@ -52,6 +52,26 @@ export class AuthService {
     return { ...safe, roleId, roleCode, accessToken };
   }
 
+  /** 读当前用户仪表盘布局（dashboard_config JSON → 数组；无/脏数据返回 null，前端回退默认布局） */
+  async getDashboardConfig(userId: number) {
+    const user = await this.repo.findOne({ where: { id: userId } });
+    if (!user?.dashboardConfig) return null;
+    try {
+      const parsed = JSON.parse(user.dashboardConfig);
+      return Array.isArray(parsed?.layout) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** 存当前用户仪表盘布局（controller 已用 DTO 校验结构，这里直接落 JSON） */
+  async saveDashboardConfig(userId: number, layout: unknown) {
+    await this.repo.update(userId, {
+      dashboardConfig: JSON.stringify({ layout }),
+    });
+    return { layout };
+  }
+
   /** 解析用户角色：有 role_id 则查 code；无则按 user.role 名查并自愈回填 role_id */
   private async resolveRole(user: User): Promise<{
     roleId: null | number;
