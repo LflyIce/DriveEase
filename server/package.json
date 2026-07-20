@@ -6,7 +6,8 @@
     "dev": "nest start --watch",
     "build": "nest build",
     "start": "node dist/main.js",
-    "seed": "ts-node src/seed.ts"
+    "seed": "ts-node src/seed.ts",
+    "cleanup:renewals": "node scripts/cleanup-orphan-renewals.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { LogService } from '../../shared/audit/log.service';
@@ -105,6 +105,14 @@ export class VehiclesService {
   async deleteOne(id: number): Promise<{ message: string }> {
     const existing = await this.repo.findOneBy({ id });
     if (!existing) throw new NotFoundException('车辆不存在');
+    // 删除守卫：名下有保单时拒绝（sql.js FK 不生效，直接删会留孤儿保单，列表显示空车牌）
+    const [{ c: policyCount }] = (await this.dataSource.query(
+      'SELECT COUNT(*) AS c FROM policy WHERE vehicle_id = ?',
+      [id],
+    )) as any[];
+    if (policyCount > 0) {
+      throw new BadRequestException(`该车辆名下还有 ${policyCount} 张保单，请先删除关联保单后再删除车辆`);
+    }
     await this.repo.delete(id);
     this.logger.log('删除车辆', existing.plateNumber);
     return { message: '删除成功' };

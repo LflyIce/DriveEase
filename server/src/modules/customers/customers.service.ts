@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { LogService } from '../../shared/audit/log.service';
 import { PaginatedResult } from '../../shared/dto/paginated-result';
 import { CreateCustomerDto } from './dto/create-customer.dto';
@@ -10,6 +10,7 @@ import { Customer } from './entities/customer.entity';
 export class CustomersService {
   constructor(
     @InjectRepository(Customer) private readonly repo: Repository<Customer>,
+    @InjectDataSource() private readonly dataSource: DataSource,
     private readonly logger: LogService,
   ) {}
 
@@ -61,6 +62,20 @@ export class CustomersService {
 
   async deleteOne(id: number): Promise<{ message: string }> {
     const existing = await this.findOneOrFail(id);
+    // 删除守卫：名下有车辆/保单时拒绝（sql.js FK 不生效，直接删会留孤儿车辆/保单，列表显示空客户名）
+    const [{ c: vehicleCount }] = (await this.dataSource.query(
+      'SELECT COUNT(*) AS c FROM vehicle WHERE customer_id = ?',
+      [id],
+    )) as any[];
+    const [{ c: policyCount }] = (await this.dataSource.query(
+      'SELECT COUNT(*) AS c FROM policy WHERE customer_id = ?',
+      [id],
+    )) as any[];
+    if (vehicleCount > 0 || policyCount > 0) {
+      throw new BadRequestException(
+        `该客户名下还有 ${vehicleCount} 台车辆、${policyCount} 张保单，请先删除关联数据后再删除客户`,
+      );
+    }
     await this.repo.delete(id);
     this.logger.log('删除客户', existing.name);
     return { message: '删除成功' };

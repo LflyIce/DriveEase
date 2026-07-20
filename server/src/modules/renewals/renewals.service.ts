@@ -9,6 +9,8 @@ import { RenewDto } from './dto/renew.dto';
 import { RenewalRecord } from './entities/renewal-record.entity';
 import { Policy } from '../policies/entities/policy.entity';
 
+// op 用 INNER JOIN：原保单已删的续保记录是悬空脏数据（无法续保、无保单信息），列表/提醒都不再展示；
+// 正常路径由 policies.deleteOne 级联清理，这里兜底历史遗留。np 保留 LEFT（新保单可能未生成）。
 const BASE_QUERY = `
   SELECT r.*,
     op.policy_number, op.customer_id,
@@ -16,7 +18,7 @@ const BASE_QUERY = `
     v.plate_number, v.brand as vehicle_brand, v.model as vehicle_model,
     np.policy_number as new_policy_number
   FROM renewal_record r
-  LEFT JOIN policy op ON r.old_policy_id = op.id
+  INNER JOIN policy op ON r.old_policy_id = op.id
   LEFT JOIN customer c ON op.customer_id = c.id
   LEFT JOIN vehicle v ON op.vehicle_id = v.id
   LEFT JOIN policy np ON r.new_policy_id = np.id

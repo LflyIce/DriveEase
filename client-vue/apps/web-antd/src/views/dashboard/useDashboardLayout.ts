@@ -63,7 +63,7 @@ export function useDashboardLayout() {
       cellHeight: 40,
       column: 12,
       float: false,
-      margin: 6,
+      margin: 3,
       // 初始为预览态（静态），进入编辑模式时 setStatic(false)
       staticGrid: true,
     }, container);

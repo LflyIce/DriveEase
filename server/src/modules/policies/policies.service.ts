@@ -211,6 +211,11 @@ export class PoliciesService {
     const existingRows = (await this.dataSource.query('SELECT * FROM policy WHERE id = ?', [id])) as any[];
     const existing = existingRows[0];
     if (!existing) throw new NotFoundException('保单不存在');
+    // 级联清理指向该保单的续保提醒（sql.js FK 不生效，需应用层维护；否则留下悬空行，仪表盘显示空保单号/客户/车牌）
+    await this.dataSource.query('DELETE FROM renewal_record WHERE old_policy_id = ? OR new_policy_id = ?', [
+      id,
+      id,
+    ]);
     await this.dataSource.query('DELETE FROM policy WHERE id = ?', [id]);
     this.logger.log('删除保单', existing.policy_number);
     return { message: '删除成功' };
