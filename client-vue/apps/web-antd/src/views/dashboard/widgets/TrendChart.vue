@@ -29,7 +29,8 @@ async function render(s: StatsApi.Dashboard | undefined) {
   await renderEcharts({
     color: [C_BLUE],
     grid: { bottom: 30, left: 50, right: 20, top: 30 },
-    tooltip: { trigger: 'axis' },
+    // className 供全局 CSS 压低 tooltip 层级（默认 9999999 会盖住弹窗）
+    tooltip: { className: 'chart-tooltip', trigger: 'axis' },
     xAxis: { boundaryGap: false, data: months, type: 'category' },
     yAxis: { name: '元', type: 'value' },
     series: [

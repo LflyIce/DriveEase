@@ -1,0 +1,10 @@
+/* 应用级全局样式（bootstrap.ts 中在 @vben/styles 之后引入） */
+
+/*
+ * echarts 6 HTML tooltip 默认挂在 body 且内联 z-index:9999999，
+ * 会盖住 antd 的 Modal/Drawer（z-index:1000）。
+ * 各图表 tooltip 统一配 className:'chart-tooltip'，在此把层级压到弹窗之下。
+ */
+.chart-tooltip {
+  z-index: 99 !important;
+}

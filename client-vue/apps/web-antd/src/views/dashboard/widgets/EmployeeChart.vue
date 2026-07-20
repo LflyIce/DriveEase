@@ -21,7 +21,12 @@ async function render(s: StatsApi.Dashboard | undefined) {
   await renderEcharts({
     color: [C_BLUE],
     grid: { bottom: 20, left: 90, right: 48, top: 20 },
-    tooltip: { axisPointer: { type: 'shadow' }, trigger: 'axis' },
+    // className 供全局 CSS 压低 tooltip 层级（默认 9999999 会盖住弹窗）
+    tooltip: {
+      axisPointer: { type: 'shadow' },
+      className: 'chart-tooltip',
+      trigger: 'axis',
+    },
     yAxis: { name: '单数', type: 'value' },
     xAxis: {
       data: emp.map((e) => e.name),

@@ -39,6 +39,10 @@ const formSchema = computed((): VbenFormSchema[] => [
   <AuthenticationLogin
     :form-schema="formSchema"
     :loading="authStore.loginLoading"
+    :show-code-login="false"
+    :show-qrcode-login="false"
+    :show-third-party-login="false"
     @submit="authStore.authLogin"
   />
+  <!-- 手机号登录/扫码登录/其他登录方式已暂时隐藏：恢复时删掉上面三个 :show-*="false" 即可 -->
 </template>

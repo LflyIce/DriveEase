@@ -21,7 +21,8 @@ async function render(s: StatsApi.Dashboard | undefined) {
   await renderEcharts({
     color: CHART_COLORS,
     legend: { bottom: 0 },
-    tooltip: { trigger: 'item' },
+    // className 供全局 CSS 压低 tooltip 层级（默认 9999999 会盖住弹窗）
+    tooltip: { className: 'chart-tooltip', trigger: 'item' },
     series: [
       {
         center: ['50%', '45%'],

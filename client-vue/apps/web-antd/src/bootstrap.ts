@@ -7,6 +7,8 @@ import { initStores } from '@vben/stores';
 import '@vben/styles';
 import '@vben/styles/antd';
 
+import './styles/global.css';
+
 import { useTitle } from '@vueuse/core';
 
 import { $t, setupI18n } from '#/locales';
