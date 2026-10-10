@@ -18,7 +18,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'driveease-dev-secret-change-me';
     PassportModule,
     JwtModule.register({
       secret: JWT_SECRET,
-      signOptions: { expiresIn: '7d' },
+      // 登录永不过期（用户要求）：不设 expiresIn → JWT 无 exp 声明，后端校验永不因时间拒绝；
+      // 前端本无会话超时逻辑，仅在收到 401（token 无效）时重新登录
+      signOptions: {},
     }),
     RbacModule,
   ],

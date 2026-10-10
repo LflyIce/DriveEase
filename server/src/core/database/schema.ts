@@ -102,11 +102,14 @@ export async function initSchema(dataSource: DataSource): Promise<void> {
     CREATE TABLE IF NOT EXISTS user (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT NOT NULL UNIQUE, password TEXT NOT NULL, email TEXT, phone TEXT,
-      role TEXT NOT NULL DEFAULT '普通员工' CHECK(role IN ('管理员', '普通员工')),
+      role TEXT NOT NULL DEFAULT '普通员工',
       status TEXT NOT NULL DEFAULT '启用' CHECK(status IN ('启用', '禁用')),
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  // 一次性迁移：旧库 user.role 上有 CHECK(role IN ('管理员','普通员工'))，会给
+  // 「员工分配角色管理新建的角色」写库时被约束拒绝 → 重建表去掉该 CHECK（数据保留）
+  await dropUserRoleCheckConstraint(dataSource);
   // RBAC：user 关联 role（role_id）；保留旧 role 列作显示兼容，权限一律走 role_id
   await ensureColumn(dataSource, 'user', 'role_id', 'INTEGER');
   // 仪表盘布局配置（JSON 字符串，per-user；见 auth.controller 的 /auth/me/dashboard-config）
@@ -196,4 +199,44 @@ export async function ensureColumn(
   if (!exists) {
     await dataSource.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
   }
+}
+
+/**
+ * 一次性迁移：去掉 user.role 上的旧 CHECK(role IN ('管理员','普通员工'))。
+ * RBAC 后 role 只是显示列（权限一律走 role_id），角色名可由「角色管理」动态新增，
+ * 旧 CHECK 会把这些新角色名拒之门外（SQLite 不能就地改 CHECK → 只能重建表）。
+ * 仅当 sqlite_master 里的建表 DDL 含该 CHECK 时才重建；新库建表时已无 CHECK，自动跳过。
+ * 按旧表实际列的交集拷贝数据（远古库可能缺 role_id/dashboard_config，随后由 ensureColumn 补齐）。
+ */
+export async function dropUserRoleCheckConstraint(dataSource: DataSource): Promise<void> {
+  const rows = (await dataSource.query(
+    `SELECT sql FROM sqlite_master WHERE type='table' AND name='user'`,
+  )) as any[];
+  const ddl: string = rows[0]?.sql ?? '';
+  if (!ddl || !/CHECK\s*\(\s*role\s+IN/i.test(ddl)) return;
+
+  const info = (await dataSource.query('PRAGMA table_info(user)')) as any[];
+  const oldCols: string[] = info.map((c: any) => c.name);
+  const targetCols = [
+    'id', 'username', 'password', 'email', 'phone', 'role', 'status',
+    'role_id', 'dashboard_config', 'created_at', 'updated_at',
+  ].filter((c) => oldCols.includes(c));
+  const colList = targetCols.join(', ');
+
+  // 先清掉可能的中途残留，保证迁移可重入
+  await dataSource.query('DROP TABLE IF EXISTS user_new');
+  await dataSource.query(`
+    CREATE TABLE user_new (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL UNIQUE, password TEXT NOT NULL, email TEXT, phone TEXT,
+      role TEXT NOT NULL DEFAULT '普通员工',
+      status TEXT NOT NULL DEFAULT '启用' CHECK(status IN ('启用', '禁用')),
+      role_id INTEGER,
+      dashboard_config TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await dataSource.query(`INSERT INTO user_new (${colList}) SELECT ${colList} FROM user`);
+  await dataSource.query('DROP TABLE user');
+  await dataSource.query('ALTER TABLE user_new RENAME TO user');
 }

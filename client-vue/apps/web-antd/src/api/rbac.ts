@@ -26,11 +26,22 @@ export namespace RbacApi {
     code: string;
     description?: string;
   }
+
+  /** 角色下拉选项（GET /roles/options，仅需登录，无 rbac:manage） */
+  export interface RoleOption {
+    id: number;
+    name: string;
+  }
 }
 
-/** 角色列表（含每角色权限码集，用于回显勾选） */
+/** 角色列表（含每角色权限码集，用于回显勾选；需 rbac:manage，仅权限管理页用） */
 export function getRoleList() {
   return requestClient.get<RbacApi.Role[]>('/roles');
+}
+
+/** 角色下拉选项（用户管理表单等处动态拉取角色用） */
+export function getRoleOptions() {
+  return requestClient.get<RbacApi.RoleOption[]>('/roles/options');
 }
 
 /** 全部权限项（只读，前端按 type/module 分组渲染） */

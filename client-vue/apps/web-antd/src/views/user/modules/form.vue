@@ -28,6 +28,8 @@ const [Modal, modalApi] = useVbenModal({
     const values = await formApi.getValues();
     // 密码留空时不提交该字段（编辑保持原密码）
     if (!values.password) delete values.password;
+    // 角色以 roleId 为准（名称由后端按 roleId 回填），剔除 setValues 带出的旧 role 名
+    delete values.role;
     modalApi.lock();
     (editingId.value
       ? updateUser(editingId.value, values)

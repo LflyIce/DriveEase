@@ -9,7 +9,10 @@ export namespace UserApi {
     password?: string;
     email?: null | string;
     phone?: null | string;
-    role: '普通员工' | '管理员';
+    /** 角色显示名（后端按 roleId 回填，两者保持同步；角色可由角色管理动态新增） */
+    role: string;
+    /** 关联角色 id（表单提交/编辑回显用它，role 仅作展示） */
+    roleId?: null | number;
     status: '禁用' | '启用';
     createdAt?: string;
     updatedAt?: string;

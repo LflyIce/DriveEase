@@ -1,10 +1,8 @@
 import type { VbenFormSchema } from '#/adapter/form';
 import type { VxeTableGridColumns } from '#/adapter/vxe-table';
 
-const ROLE_OPTIONS = [
-  { label: '管理员', value: '管理员' },
-  { label: '普通员工', value: '普通员工' },
-];
+import { getRoleOptions } from '#/api/rbac';
+
 const STATUS_OPTIONS = [
   { label: '启用', value: '启用' },
   { label: '禁用', value: '禁用' },
@@ -30,10 +28,15 @@ export function useFormSchema(): VbenFormSchema[] {
     { component: 'Input', fieldName: 'email', label: '邮箱' },
     { component: 'Input', fieldName: 'phone', label: '手机号', rules: 'required' },
     {
-      component: 'Select',
-      componentProps: { options: ROLE_OPTIONS },
-      defaultValue: '普通员工',
-      fieldName: 'role',
+      // 角色来自角色管理（RBAC），动态拉取；提交 roleId，名称由后端按 roleId 回填
+      component: 'ApiSelect',
+      componentProps: {
+        api: getRoleOptions,
+        labelField: 'name',
+        placeholder: '请选择角色',
+        valueField: 'id',
+      },
+      fieldName: 'roleId',
       label: '角色',
       rules: 'required',
     },
@@ -52,8 +55,15 @@ export function useGridFormSchema(): VbenFormSchema[] {
   return [
     { component: 'Input', fieldName: 'keyword', label: '关键字' },
     {
-      component: 'Select',
-      componentProps: { options: ROLE_OPTIONS, allowClear: true },
+      // 搜索按角色名过滤（后端 u.role = :role），valueField 用 name
+      component: 'ApiSelect',
+      componentProps: {
+        api: getRoleOptions,
+        allowClear: true,
+        labelField: 'name',
+        placeholder: '全部',
+        valueField: 'name',
+      },
       fieldName: 'role',
       label: '角色',
     },

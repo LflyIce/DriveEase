@@ -64,6 +64,13 @@ export class RbacService {
     return this.permRepo.find({ order: { type: 'ASC', sort: 'ASC' } });
   }
 
+  /** 角色下拉选项（只读 {id,name}，用户管理表单用；仅需登录，不含权限码） */
+  async listRoleOptions(): Promise<Array<{ id: number; name: string }>> {
+    return (await this.dataSource.query(
+      'SELECT id, name FROM role ORDER BY id',
+    )) as Array<{ id: number; name: string }>;
+  }
+
   /** 角色列表（含每角色的权限码集合，供权限管理 UI 勾选回显） */
   async listRoles(): Promise<Array<Record<string, unknown>>> {
     const rows = (await this.dataSource.query(
