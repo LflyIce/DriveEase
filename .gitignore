@@ -32,3 +32,6 @@ pnpm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
+
+# Playwright MCP 会话产物（截图/日志）
+.playwright-mcp/

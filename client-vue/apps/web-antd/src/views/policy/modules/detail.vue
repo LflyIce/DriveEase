@@ -95,7 +95,16 @@ const materials = computed(() => {
     { label: '营业执照', type: 'image', url: d.customer?.businessLicense ?? null },
     { label: '行驶证正页', type: 'image', url: d.vehicle?.drivingFront ?? null },
     { label: '行驶证副页', type: 'image', url: d.vehicle?.drivingBack ?? null },
-    { label: '其他承保材料', type: 'image', url: d.quotation ?? null },
+    // 其他承保材料：极简开单一次可传多份（URL 逗号拼接），拆开逐张展示
+    ...(d.quotation ?? '')
+      .split(',')
+      .map((u) => u.trim())
+      .filter(Boolean)
+      .map((url, i, arr) => ({
+        label: arr.length > 1 ? `承保材料${i + 1}` : '其他承保材料',
+        type: 'image' as const,
+        url,
+      })),
     { label: '电子保单', type: 'file', url: d.policyFile ?? null },
   ] as { label: string; type: 'file' | 'image'; url: null | string }[];
 });

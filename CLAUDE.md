@@ -33,7 +33,9 @@ npm run cleanup:renewals -w server   # 清理「原保单已不存在」的悬�
 docker compose up -d         # build + run；挂载 ./data/database.sqlite → /app/server/database.sqlite 持久化
 ```
 
-There is **no test runner and no linter** configured for the server — do not invent `npm test` / `npm run lint`. Typecheck the server with `node node_modules/typescript/bin/tsc --noEmit -p server/tsconfig.json` (run from repo root).
+There is **no test runner and no linter** configured for the server — do not invent `npm test` / `npm run lint`. Typecheck the server with `node node_modules/typescript/bin/tsc --noEmit -p server/tsconfig.json` (run from repo root). The pnpm monorepo does ship framework-level `pnpm lint` (vsh lint) / `pnpm test:unit` (vitest), but they sweep the **entire Vben fork** (framework packages included) — for business-code changes the practical check is `pnpm --filter @vben/web-antd typecheck`.
+
+**Git hooks (lefthook):** the real config is `client-vue/lefthook.yml` (bottom section — the commented example above it, and the root `lefthook.yml`, are inert templates). It defines `pre-commit` (oxlint/oxfmt/eslint/stylelint with `--fix` + full `pnpm check:type`), `commit-msg` (commitlint), and `post-merge` (`pnpm install`); installed into `.git/hooks` by the `prepare` script when `pnpm install` runs in `client-vue/`. Commit messages follow the conventional `type: 中文描述` format (e.g. `feat: 优化仪表盘的样式`) — commitlint rejects other shapes when hooks are active.
 
 To reset all data: delete `server/database.sqlite`, then `npm run seed -w server`. (The sqlite file is gitignored, so a fresh clone has no data until you seed.) **`npm run seed` is itself destructive** — `seed.ts` `DELETE`s every table (and clears `sqlite_sequence`) before re-inserting demo data, and refuses to run when `NODE_ENV=production`; never run it against a DB whose data you want to keep.
 

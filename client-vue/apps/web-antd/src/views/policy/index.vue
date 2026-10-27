@@ -16,6 +16,7 @@ import { deletePolicy, getPolicyList, updatePolicyStatus } from '#/api/policy';
 import { useColumns, useGridFormSchema } from './data';
 import DetailDrawer from './modules/detail.vue';
 import EditDrawer from './modules/edit.vue';
+import QuickCreateDrawer from './modules/quick-create.vue';
 
 defineOptions({ name: 'Policy' });
 
@@ -45,6 +46,7 @@ function policyNumberColor(row: PolicyApi.Policy): string | undefined {
 
 const detailRef = ref();
 const editRef = ref();
+const quickCreateRef = ref();
 
 /** 到期快捷筛选窗口（天）：undefined=不过滤；30=月内到期；10=10日内到期 */
 const expiryWithin = ref<number | undefined>();
@@ -89,6 +91,11 @@ function onEdit(row: PolicyApi.Policy) {
   editRef.value?.show(row.id!);
 }
 
+/** 极简开单：左侧抽屉（quick-create.vue） */
+function onQuickCreate() {
+  quickCreateRef.value?.show();
+}
+
 function onActivate(row: PolicyApi.Policy) {
   updatePolicyStatus(row.id!, '生效').then(() => {
     message.success('已激活');
@@ -115,10 +122,22 @@ function onDelete(row: PolicyApi.Policy) {
   <Page auto-content-height>
     <DetailDrawer ref="detailRef" />
     <EditDrawer ref="editRef" @success="() => gridApi.query()" />
+    <QuickCreateDrawer ref="quickCreateRef" @success="() => gridApi.query()" />
 
     <Grid>
       <template #toolbar-actions>
         <div class="flex items-center gap-2">
+          <!-- 极简开单：主按钮 + 加号，左侧抽屉录入（policy:create 权限） -->
+          <Button
+            v-access:code="['policy:create']"
+            type="primary"
+            @click="onQuickCreate"
+          >
+            <template #icon>
+              <IconifyIcon icon="ant-design:plus-outlined" />
+            </template>
+            开单
+          </Button>
           <!-- 月内到期：warning 橙 + 日历图标；激活实心 -->
           <Button
             class="btn-warn"

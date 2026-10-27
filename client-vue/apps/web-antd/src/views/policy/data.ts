@@ -454,3 +454,134 @@ export function useEditBaseSchema(): VbenFormSchema[] {
     { component: 'Input', fieldName: 'contactPhone', label: '联系电话' },
   ];
 }
+
+/* ============================================================
+ * 极简开单抽屉（保单查询页工具栏「开单」入口，quick-create.vue）
+ * 单列精简表单；insurancePeriod 为表单专用字段（1/2/3/5/10 年），
+ * 提交时换算成 expiryDate，不落库；材料多文件 URL 逗号拼接存 quotation。
+ * ============================================================ */
+
+/** 保期选项（年） */
+export const QUICK_PERIOD_OPTIONS = [1, 2, 3, 5, 10].map((y) => ({
+  label: `${y}年`,
+  value: y,
+}));
+
+/**
+ * 极简开单表单。onSumChange：三项保费合计变化时回调（合计在抽屉里以展示条呈现，
+ * 不作为表单字段，默认 ¥0.00）。非车保费沿用录入页映射存 surchargePremium 列。
+ */
+export function useQuickCreateSchema(
+  onSumChange?: (sum: number) => void,
+): VbenFormSchema[] {
+  // 注意：componentProps 第二参 formApi 是 vee-validate FormActions（无 getValues），
+  // 读值用第一参 values（响应式表单值）。
+  const PREMIUM_PARTS = [
+    'trafficPremium',
+    'commercialPremium',
+    'surchargePremium',
+  ] as const;
+  const numLinked = (fieldName: string, label: string): VbenFormSchema => ({
+    component: 'InputNumber',
+    componentProps: (values: any) => ({
+      min: 0,
+      style: 'width:100%',
+      onChange: (val: any) => {
+        const m = { ...values, [fieldName]: val };
+        const sum = PREMIUM_PARTS.reduce(
+          (acc, k) => acc + (Number(m[k]) || 0),
+          0,
+        );
+        onSumChange?.(Math.round(sum * 100) / 100);
+      },
+    }),
+    fieldName,
+    label,
+  });
+  return [
+    {
+      component: 'Input',
+      componentProps: { placeholder: '个人姓名或企业名称' },
+      fieldName: 'name',
+      label: '客户名称',
+      rules: 'required',
+    },
+    {
+      component: 'Select',
+      componentProps: {
+        options: CUSTOMER_TYPE_OPTIONS,
+        placeholder: '请选择客户类型',
+      },
+      fieldName: 'customerType',
+      label: '客户类型',
+      rules: 'required',
+    },
+    {
+      component: 'Input',
+      componentProps: { maxlength: 11, placeholder: '11 位手机号' },
+      fieldName: 'phone',
+      label: '手机号码',
+      rules: 'required',
+    },
+    {
+      component: 'ApiSelect',
+      componentProps: {
+        api: async () => (await getUserList({ page: 1, pageSize: 1000 })).items,
+        labelField: 'username',
+        placeholder: '请选择业务员',
+        valueField: 'username',
+      },
+      fieldName: 'salesPerson',
+      label: '业务员',
+      rules: 'required',
+    },
+    {
+      component: 'Input',
+      componentProps: { placeholder: '如：粤B12345' },
+      fieldName: 'plateNumber',
+      label: '车牌号',
+      rules: 'required',
+    },
+    {
+      component: 'ApiSelect',
+      componentProps: {
+        api: async () =>
+          (await getInsuranceCompanyList({ page: 1, pageSize: 1000 })).items,
+        labelField: 'name',
+        placeholder: '请选择保险公司',
+        valueField: 'name',
+      },
+      fieldName: 'insuranceCompany',
+      label: '保险公司',
+      rules: 'required',
+    },
+    {
+      component: 'DatePicker',
+      componentProps: { style: 'width:100%' },
+      fieldName: 'policyDate',
+      label: '投保日期',
+      rules: 'required',
+    },
+    {
+      component: 'RadioGroup',
+      componentProps: {
+        buttonStyle: 'solid',
+        optionType: 'button',
+        options: QUICK_PERIOD_OPTIONS,
+      },
+      defaultValue: 1,
+      fieldName: 'insurancePeriod',
+      label: '保期',
+      rules: 'required',
+    },
+    numLinked('trafficPremium', '交强险保费'),
+    numLinked('commercialPremium', '商业险保费'),
+    numLinked('surchargePremium', '非车保费'),
+    {
+      component: 'Textarea',
+      componentProps: { placeholder: '选填', rows: 2 },
+      fieldName: 'remark',
+      label: '备注',
+    },
+  ];
+}

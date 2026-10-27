@@ -197,3 +197,37 @@
 
 - 已确认：数据库设计与 `server/src/database.js` initDB 逐表一致；文档命令与各 `package.json` scripts 一致。
 - 已确认：`POST /api/users/login` 被 client-vue 调用，未误删；client/ 仍为可用生产前端。
+
+## 2026-10-27 极简开单（保单查询页左侧抽屉）
+
+### 背景
+
+- 业务员日常开单场景需要在微信聊天中随手收材料、快速建单，完整录入页（5 组表单）太重。
+- 在保单查询页工具栏增加「开单」入口，从左侧抽屉完成极简开单，一步到位。
+
+### 变更范围
+
+- `client-vue/apps/web-antd/src/views/policy/modules/quick-create.vue`（新增）
+- `client-vue/apps/web-antd/src/views/policy/data.ts`
+- `client-vue/apps/web-antd/src/views/policy/index.vue`
+- `client-vue/apps/web-antd/src/views/policy/modules/detail.vue`
+- `CLAUDE.md`（补充 lefthook hooks 与前端校验说明，与本功能无关的文档修订）
+
+后端零改动：完全复用 `POST /api/v1/policies/full` 聚合接口（客户按手机号 upsert、车辆按车牌新建、保单号自动生成、状态默认「待生效」）。
+
+### 更新内容
+
+- **入口**：保单查询页工具栏首位新增「＋ 开单」主按钮（`v-access:code="['policy:create']"`），点击从左侧打开开单抽屉（`placement="left"`，宽 520）。
+- **表单字段**（单列）：客户名称、客户类型、手机号码、业务员（ApiSelect，默认当前登录人）、车牌号、保险公司、投保日期（默认今天）、保期（1/2/3/5/10 年按钮组，默认 1 年）——均必填；交强险保费、商业险保费、非车保费、备注——均可空。到期日期由「投保日期 + 保期 N 年」前端换算提交。
+- **合计保费**：非表单字段的展示条（默认 ¥0.00），由三项保费联动自动求和（两位小数），不可手动填写。
+- **保费映射**：交强/商业分项存 `trafficPremium`/`commercialPremium`；**非车保费沿用录入页既定映射存 `surchargePremium`**，两边口径一致；后端按交强/商业是否 >0 自动推导险种（交强险/商业险/综合）。
+- **材料上传**：`Upload.Dragger` 双入口（点击选择 + 微信 PC 版聊天窗口直接拖入，多文件）；上传接 axios `onUploadProgress` → antd 列表项**实时进度条**；列表用 `listType="picture"` 紧凑行（48px 缩略图）；点击缩略图页内全屏预览（Esc/X/蒙层均可关、关闭即清空状态）；拖拽区内容显式 flex 居中 + 48px 主色云图标（`IconifyIcon` 用 Tailwind `size-*` 控制尺寸）。
+- **材料存储**：多文件 URL 逗号拼接存 `policy.quotation`（其他承保材料）；详情页按逗号拆分逐张展示（多张时标签为「承保材料1/2/…」）。
+- **业务约束提示**：抽屉内灰字提示「车牌需未录入过（续保走续保流程）；同手机号客户自动复用」；重复车牌由后端 400 拦截并全局 toast。
+- **修复**（实现过程中发现的坑）：vben `formApi.validate()` 返回的 `values` 在适配层为空对象，改为项目惯例 `validate()` 只看 `valid` + `getValues()` 取值；`IconifyIcon`（@iconify/vue）不认 `:size` prop，尺寸须用 `size-*` class。
+
+### 验证记录
+
+- 已执行：`pnpm --filter @vben/web-antd typecheck`——13 个存量错误与改动前逐字一致，本次文件零错误。
+- E2E（dev 环境实测）：左侧抽屉字段与默认值正确；必填逐项校验、手机号 11 位校验；13.8MB 大图上传进度条可见（截到 98%）；重复车牌被后端拒绝且无脏数据；正常开单 `POL-20261027-155028` 列表自动刷新（保费 ¥350.00、险种「综合」、到期=投保日+1 年、备注与材料 URL 落库核对一致）；详情页承保材料可预览。测试数据（保单/车辆/客户）均已删除。
+
