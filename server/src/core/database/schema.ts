@@ -88,6 +88,10 @@ export async function initSchema(dataSource: DataSource): Promise<void> {
   await ensureColumn(dataSource, 'vehicle', 'driving_back', 'TEXT');
   await ensureColumn(dataSource, 'policy', 'quotation', 'TEXT');
   await ensureColumn(dataSource, 'policy', 'policy_file', 'TEXT');
+  // 极简开单标记：商业险类型（'三者'/'三者+车损'）、业务类型（'续保'/'转保'）。
+  // 自由 TEXT 不加 CHECK——枚举日后可能扩充，加 CHECK 就得删表重建（SQLite 不能就地改约束）
+  await ensureColumn(dataSource, 'policy', 'commercial_kind', 'TEXT');
+  await ensureColumn(dataSource, 'policy', 'business_type', 'TEXT');
 
   await q(`
     CREATE TABLE IF NOT EXISTS renewal_record (

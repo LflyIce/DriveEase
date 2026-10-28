@@ -55,6 +55,10 @@ export class Policy {
   @Column({ nullable: true }) quotation: string | null;
   @Column({ name: 'policy_file', nullable: true }) policyFile: string | null;
 
+  // 极简开单标记（自由 TEXT 无 CHECK，见 schema.ts）：商业险类型（'三者'/'三者+车损'）、业务类型（'续保'/'转保'）
+  @Column({ name: 'commercial_kind', nullable: true }) commercialKind: string | null;
+  @Column({ name: 'business_type', nullable: true }) businessType: string | null;
+
   @Column({ name: 'created_at', insert: false }) createdAt: string;
   @Column({ name: 'updated_at', insert: false }) updatedAt: string;
 }

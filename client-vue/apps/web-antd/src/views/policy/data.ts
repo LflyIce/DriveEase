@@ -1,6 +1,11 @@
 import type { VbenFormSchema } from '#/adapter/form';
 import type { VxeTableGridColumns } from '#/adapter/vxe-table';
 
+import type { Ref } from 'vue';
+
+import { h } from 'vue';
+
+import { Select } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
 import { getInsuranceCompanyList } from '#/api/insurance-company';
@@ -62,6 +67,13 @@ export function useColumns(): VxeTableGridColumns {
     { field: 'insuranceCompany', title: '保险公司', width: 130 },
     { field: 'salesPerson', title: '业务员', width: 100 },
     { field: 'insuranceType', title: '险种', width: 90 },
+    {
+      align: 'center',
+      field: 'businessType',
+      slots: { default: 'businessType' },
+      title: '业务类型',
+      width: 90,
+    },
     {
       align: 'right',
       field: 'premium',
@@ -459,6 +471,8 @@ export function useEditBaseSchema(): VbenFormSchema[] {
  * 极简开单抽屉（保单查询页工具栏「开单」入口，quick-create.vue）
  * 单列精简表单；insurancePeriod 为表单专用字段（1/2/3/5/10 年），
  * 提交时换算成 expiryDate，不落库；材料多文件 URL 逗号拼接存 quotation。
+ * businessType（续保/转保）控制后端复用既有车辆（同车牌再挂新一期保单）；
+ * commercialKind（商业险方案，下拉内嵌在商业险保费行）存 policy.commercial_kind。
  * ============================================================ */
 
 /** 保期选项（年） */
@@ -467,12 +481,27 @@ export const QUICK_PERIOD_OPTIONS = [1, 2, 3, 5, 10].map((y) => ({
   value: y,
 }));
 
+/** 商业险类型选项（存 policy.commercial_kind；后端自由 TEXT 无 CHECK） */
+export const COMMERCIAL_KIND_OPTIONS = ['三者', '三者+车损'].map((v) => ({
+  label: v,
+  value: v,
+}));
+
+/** 业务类型选项（存 policy.business_type；历史数据为空，列表/详情显示 -） */
+export const BUSINESS_TYPE_OPTIONS = ['续保', '转保'].map((v) => ({
+  label: v,
+  value: v,
+}));
+
 /**
  * 极简开单表单。onSumChange：三项保费合计变化时回调（合计在抽屉里以展示条呈现，
  * 不作为表单字段，默认 ¥0.00）。非车保费沿用录入页映射存 surchargePremium 列。
+ * commercialKind：商业险方案（三者/三者+车损）下拉的宿主 ref——它不是表单字段，
+ * 以 InputNumber 的 addonBefore 内嵌呈现（提交时由 quick-create 读 ref 组装）。
  */
 export function useQuickCreateSchema(
   onSumChange?: (sum: number) => void,
+  commercialKind?: Ref<string>,
 ): VbenFormSchema[] {
   // 注意：componentProps 第二参 formApi 是 vee-validate FormActions（无 getValues），
   // 读值用第一参 values（响应式表单值）。
@@ -481,11 +510,17 @@ export function useQuickCreateSchema(
     'commercialPremium',
     'surchargePremium',
   ] as const;
-  const numLinked = (fieldName: string, label: string): VbenFormSchema => ({
+  // buildAddon 在 componentProps 每次求值时新建 VNode（内部读 ref 才能触发重渲），不能缓存复用
+  const numLinked = (
+    fieldName: string,
+    label: string,
+    buildAddon?: () => any,
+  ): VbenFormSchema => ({
     component: 'InputNumber',
     componentProps: (values: any) => ({
       min: 0,
       style: 'width:100%',
+      ...(buildAddon ? { addonBefore: buildAddon() } : {}),
       onChange: (val: any) => {
         const m = { ...values, [fieldName]: val };
         const sum = PREMIUM_PARTS.reduce(
@@ -556,6 +591,17 @@ export function useQuickCreateSchema(
       rules: 'required',
     },
     {
+      component: 'RadioGroup',
+      componentProps: {
+        buttonStyle: 'solid',
+        optionType: 'button',
+        options: BUSINESS_TYPE_OPTIONS,
+      },
+      defaultValue: '续保',
+      fieldName: 'businessType',
+      label: '业务类型',
+    },
+    {
       component: 'DatePicker',
       componentProps: { style: 'width:100%' },
       fieldName: 'policyDate',
@@ -575,7 +621,17 @@ export function useQuickCreateSchema(
       rules: 'required',
     },
     numLinked('trafficPremium', '交强险保费'),
-    numLinked('commercialPremium', '商业险保费'),
+    // 商业险保费：一行内嵌下拉（三者/三者+车损，默认三者）+ 金额输入框
+    numLinked('commercialPremium', '商业险保费', () =>
+      h(Select, {
+        options: COMMERCIAL_KIND_OPTIONS,
+        style: 'width: 110px',
+        value: commercialKind?.value ?? '三者',
+        'onUpdate:value': (v: any) => {
+          if (commercialKind) commercialKind.value = v;
+        },
+      }),
+    ),
     numLinked('surchargePremium', '非车保费'),
     {
       component: 'Textarea',

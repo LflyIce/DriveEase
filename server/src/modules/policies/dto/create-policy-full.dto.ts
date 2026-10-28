@@ -64,4 +64,7 @@ export class CreatePolicyFullDto {
   @ApiPropertyOptional() @IsOptional() totalCharge?: any;
   @ApiPropertyOptional() @IsOptional() quotation?: any;
   @ApiPropertyOptional() @IsOptional() policyFile?: any;
+  // 极简开单标记：商业险类型（'三者'/'三者+车损'）；业务类型（'续保'/'转保'）——带值时车牌已存在改为复用车辆
+  @ApiPropertyOptional() @IsOptional() commercialKind?: any;
+  @ApiPropertyOptional() @IsOptional() businessType?: any;
 }

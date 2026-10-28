@@ -231,3 +231,29 @@
 - 已执行：`pnpm --filter @vben/web-antd typecheck`——13 个存量错误与改动前逐字一致，本次文件零错误。
 - E2E（dev 环境实测）：左侧抽屉字段与默认值正确；必填逐项校验、手机号 11 位校验；13.8MB 大图上传进度条可见（截到 98%）；重复车牌被后端拒绝且无脏数据；正常开单 `POL-20261027-155028` 列表自动刷新（保费 ¥350.00、险种「综合」、到期=投保日+1 年、备注与材料 URL 落库核对一致）；详情页承保材料可预览。测试数据（保单/车辆/客户）均已删除。
 
+
+## 2026-10-28 极简开单：商业险类型下拉 + 业务类型（续保/转保）
+
+### 背景
+
+- 极简开单需要标记商业险方案（只保三者，还是三者+车损），以及区分续保/转保业务。
+- 续保/转保单的车牌此前必然已录入，被「一车一保单」校验拦死，需要放开为复用既有车辆。
+
+### 变更范围
+
+- server：`schema.ts`（policy 加 `commercial_kind`/`business_type`，ensureColumn 重启自动生效，无 CHECK）、`policy.entity.ts`、`create-policy-full.dto.ts`、`policies.service.ts`（createFull）
+- client-vue：`policy/data.ts`、`policy/modules/quick-create.vue`、`policy/modules/detail.vue`、`policy/index.vue`、`api/policy.ts`
+
+### 更新内容
+
+- **表单**：「商业险保费」改为**下拉+输入框合体一行**（`InputNumber` 的 `addonBefore` 内嵌方案下拉：三者/三者+车损，默认**三者**；方案值不进表单，由 quick-create 的 ref 持有、提交时组装 `commercialKind`）；「保险公司」后新增「业务类型」按钮组（**续保默认**/转保，样式同保期）。
+- **落库**：`policy.commercial_kind`、`policy.business_type`（自由 TEXT，历史数据为空显示 `-`）；统计口径不变（`commercial_premium` 金额列照旧）。
+- **车辆复用**：`POST /policies/full` 带 `businessType` 时，车牌已存在不再 400，改为复用该车辆同挂新一期保单（客户仍按手机号复用/新建）；不带 `businessType`（保单录入页）保持一车一保单报错不变。抽屉顶部提示文案同步更新。
+- **展示**：列表「险种」后加「业务类型」Tag 列（续保蓝/转保橙，空 `-`）；详情页基础信息加业务类型 Tag、保费明细加「商业险类型」。
+
+### 验证记录
+
+- 已执行：server `tsc --noEmit` 通过；`pnpm --filter @vben/web-antd typecheck`——13 个存量错误与 2026-10-27 记录逐字一致，本次文件零错误。
+- API E2E（dev 环境实测，watch 重启后新列自动补齐）：同车牌带 `businessType=转保` 提交 → 成功且 `vehicleId` 复用原车辆、`businessType=转保`/`commercialKind=三者+车损` 落库正确；同车牌不带 `businessType` → 400「该车牌已录入」。
+- UI E2E（Playwright 实测）：开单抽屉「商业险保费」一行渲染为 `[三者 ▾][金额输入框]`，无独立「商业险类型」行；方案下拉切到「三者+车损」后选中项即时更新（vben `computedProps` 是 computed，componentProps 函数内读 ref 会建立依赖 → 换值重渲）；完整走单（传材料+提交）抓包确认请求体含 `commercialKind:"三者+车损"`/`businessType:"续保"`，列表新增行「业务类型」列显示「续保」Tag。测试保单/车辆/材料已删除，临时 png 已清理。
+- 坑：Git Bash 的 `curl -d` 直接内联中文会按本地编码发出（落库乱码），中文 JSON 体须经 UTF-8 文件 `--data-binary @file` 发送。

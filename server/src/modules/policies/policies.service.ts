@@ -221,8 +221,8 @@ export class PoliciesService {
     return { message: '删除成功' };
   }
 
-  // 录入页聚合接口：客户(按手机号命中则只复用 id，否则新建) + 车辆(永远新建，车牌重复则拒绝) + 新建保单。
-  // 设计：录入=新车新单；同车新一期保单走续保(renewals)流程。注：sql.js 默认无事务，多步写非原子。
+  // 录入页聚合接口：客户(按手机号命中则只复用 id，否则新建) + 车辆(默认新建，车牌重复拒绝；带 businessType 则复用既有车辆) + 新建保单。
+  // 设计：录入=新车新单；极简开单(续保/转保)可同车再挂新一期保单。注：sql.js 默认无事务，多步写非原子。
   async createFull(b: CreatePolicyFullDto): Promise<any> {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
@@ -238,12 +238,14 @@ export class PoliciesService {
     // 2. 必填显式校验（提示准确；DB NOT NULL 兜底会按列序报错，可能错位成其他字段）
     if (!b.name) throw new BadRequestException('客户名称为必填');
     if (!b.phone) throw new BadRequestException('手机号码为必填');
-    // 车辆：录入页一车一保单——车牌必须不存在。提前校验，避免插了客户又抛错留孤儿行
+    // 车辆：录入页一车一保单——车牌必须不存在，提前校验避免插了客户又抛错留孤儿行；
+    // 极简开单（带 businessType=续保/转保）：车牌已存在则复用该车辆，同车再挂新一期保单
     if (!b.plateNumber) throw new BadRequestException('车牌号为必填');
     const vehicleExist = await this.vehicleRepo.findOneBy({ plateNumber: b.plateNumber });
-    if (vehicleExist) {
+    if (vehicleExist && !b.businessType) {
       throw new BadRequestException('该车牌已录入，如需续保请使用续保流程');
     }
+    let vehicleId: number | undefined = vehicleExist?.id;
 
     // 3. 新客户才插入（复用时跳过）
     if (customerId === undefined) {
@@ -268,30 +270,32 @@ export class PoliciesService {
       customerId = saved.id;
     }
 
-    // 4. 插入新车辆（车牌已确认不存在；旧 brand/model 用 brandModel 兜底）
-    const brandModel = b.brandModel ?? '';
-    const savedVehicle = await this.vehicleRepo.save(
-      this.vehicleRepo.create({
-        plateNumber: b.plateNumber,
-        brand: brandModel,
-        model: brandModel,
-        vin: b.vin ?? null,
-        engineNumber: b.engineNumber ?? null,
-        customerId,
-        brandModel,
-        energyType: b.energyType ?? null,
-        vehicleType: b.vehicleType ?? null,
-        registerDate: b.registerDate ?? null,
-        certificateDate: b.certificateDate ?? null,
-        nextInspectionDate: b.nextInspectionDate ?? null,
-        transferFlag: b.transferFlag ?? null,
-        seats: b.seats ?? null,
-        loadCapacity: b.loadCapacity ?? null,
-        drivingFront: b.drivingFront ?? null,
-        drivingBack: b.drivingBack ?? null,
-      }),
-    );
-    const vehicleId = savedVehicle.id;
+    // 4. 新车牌才插入新车辆（续保/转保复用时跳过；旧 brand/model 用 brandModel 兜底）
+    if (vehicleId === undefined) {
+      const brandModel = b.brandModel ?? '';
+      const savedVehicle = await this.vehicleRepo.save(
+        this.vehicleRepo.create({
+          plateNumber: b.plateNumber,
+          brand: brandModel,
+          model: brandModel,
+          vin: b.vin ?? null,
+          engineNumber: b.engineNumber ?? null,
+          customerId,
+          brandModel,
+          energyType: b.energyType ?? null,
+          vehicleType: b.vehicleType ?? null,
+          registerDate: b.registerDate ?? null,
+          certificateDate: b.certificateDate ?? null,
+          nextInspectionDate: b.nextInspectionDate ?? null,
+          transferFlag: b.transferFlag ?? null,
+          seats: b.seats ?? null,
+          loadCapacity: b.loadCapacity ?? null,
+          drivingFront: b.drivingFront ?? null,
+          drivingBack: b.drivingBack ?? null,
+        }),
+      );
+      vehicleId = savedVehicle.id;
+    }
 
     // 5. 新建保单（policy_number 自动生成；推导 insurance_type；日期双写）
     const policyNumber = `POL-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
@@ -340,6 +344,8 @@ export class PoliciesService {
         totalCharge: b.totalCharge ?? null,
         quotation: b.quotation ?? null,
         policyFile: b.policyFile ?? null,
+        commercialKind: b.commercialKind ?? null,
+        businessType: b.businessType ?? null,
       }),
     );
 

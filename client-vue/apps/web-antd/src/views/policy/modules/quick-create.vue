@@ -25,10 +25,17 @@ const saving = ref(false);
 // 合计保费：非表单字段，由三项保费联动求和，展示条呈现（默认 0）
 const totalPremium = ref(0);
 
+// 商业险方案（三者/三者+车损）：非表单字段，内嵌在「商业险保费」行的 addonBefore 下拉，
+// 提交时读此 ref 组装 commercialKind
+const commercialKind = ref('三者');
+
 const [Form, formApi] = useVbenForm({
-  schema: useQuickCreateSchema((sum) => {
-    totalPremium.value = sum;
-  }),
+  schema: useQuickCreateSchema(
+    (sum) => {
+      totalPremium.value = sum;
+    },
+    commercialKind,
+  ),
   showDefaultActions: false,
 });
 
@@ -113,6 +120,7 @@ function reset() {
   formApi.resetForm();
   fileList.value = [];
   totalPremium.value = 0;
+  commercialKind.value = '三者';
 }
 
 async function onSubmit() {
@@ -158,6 +166,9 @@ async function onSubmit() {
       trafficPremium: val.trafficPremium ?? null,
       commercialPremium: val.commercialPremium ?? null,
       surchargePremium: val.surchargePremium ?? null,
+      // 标记列：商业险方案（三者/三者+车损，addonBefore 下拉的 ref）；业务类型（续保/转保，后端据此允许复用既有车辆）
+      commercialKind: commercialKind.value || undefined,
+      businessType: val.businessType || undefined,
       premium: totalPremium.value,
       remark: val.remark || undefined,
       // 材料不分类，多文件 URL 逗号拼接存「其他承保材料」列（详情页拆开逐张展示）
@@ -181,7 +192,7 @@ async function onSubmit() {
     <div
       class="mb-3 rounded-md bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-400 dark:bg-gray-800/60"
     >
-      车牌需未录入过（续保请走续保流程）；同手机号客户自动复用，不覆盖已有资料。
+      续保/转保时，已录入车牌将自动复用车辆资料；同手机号客户自动复用，不覆盖已有资料。
     </div>
 
     <Form />

@@ -28,6 +28,12 @@ const STATUS_COLOR: Record<string, string> = {
   已退保: 'red',
 };
 
+/** 业务类型 → 标签颜色（续保蓝/转保橙；历史数据为空显示 -） */
+const BUSINESS_TYPE_COLOR: Record<string, string> = {
+  续保: 'blue',
+  转保: 'orange',
+};
+
 /**
  * 保单号文字色：退保灰 / 10日内到期红 / 月内(30天)到期警告色，其余默认。
  * 与到期快捷筛选 toggleExpiry 的 30/10 天口径一致。
@@ -169,6 +175,13 @@ function onDelete(row: PolicyApi.Policy) {
 
       <template #status="{ row }">
         <Tag :color="STATUS_COLOR[row.status]">{{ row.status }}</Tag>
+      </template>
+
+      <template #businessType="{ row }">
+        <Tag v-if="row.businessType" :color="BUSINESS_TYPE_COLOR[row.businessType]">
+          {{ row.businessType }}
+        </Tag>
+        <span v-else>-</span>
       </template>
 
       <template #action="{ row }">

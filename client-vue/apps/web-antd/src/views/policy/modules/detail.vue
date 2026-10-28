@@ -31,6 +31,12 @@ const STATUS_COLOR: Record<string, string> = {
   已退保: 'red',
 };
 
+/** 业务类型 → 标签颜色（续保蓝/转保橙；历史数据为空显示 -） */
+const BUSINESS_TYPE_COLOR: Record<string, string> = {
+  续保: 'blue',
+  转保: 'orange',
+};
+
 function formatMoney(value: any): string {
   return value != null && value !== ''
     ? `¥${Number(value).toLocaleString('zh-CN', {
@@ -137,6 +143,15 @@ defineExpose({ show });
           </DescriptionsItem>
           <DescriptionsItem label="险种">
             {{ detail.insuranceType }}
+          </DescriptionsItem>
+          <DescriptionsItem label="业务类型">
+            <Tag
+              v-if="detail.businessType"
+              :color="BUSINESS_TYPE_COLOR[detail.businessType]"
+            >
+              {{ detail.businessType }}
+            </Tag>
+            <span v-else>-</span>
           </DescriptionsItem>
           <DescriptionsItem label="投保日期">
             {{ orDash(detail.policyDate) }}
@@ -287,6 +302,9 @@ defineExpose({ show });
           </DescriptionsItem>
           <DescriptionsItem label="商业险保费">
             {{ formatMoney(detail.commercialPremium) }}
+          </DescriptionsItem>
+          <DescriptionsItem label="商业险类型">
+            {{ orDash(detail.commercialKind) }}
           </DescriptionsItem>
           <DescriptionsItem label="非车保费">
             {{ formatMoney(detail.surchargePremium) }}

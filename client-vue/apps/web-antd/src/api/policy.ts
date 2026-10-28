@@ -7,6 +7,10 @@ export namespace PolicyApi {
   export type PolicyStatus = '生效' | '待生效' | '已过期' | '已退保';
   /** 险种（与后端 policy.insurance_type CHECK 约束一致） */
   export type InsuranceType = '交强险' | '商业险' | '综合';
+  /** 商业险类型（极简开单下拉，存 policy.commercial_kind，自由 TEXT；历史数据为空） */
+  export type CommercialKind = '三者' | '三者+车损';
+  /** 业务类型（极简开单，存 policy.business_type，自由 TEXT；历史数据为空） */
+  export type BusinessType = '续保' | '转保';
 
   export interface Policy {
     id?: number;
@@ -14,6 +18,7 @@ export namespace PolicyApi {
     customerId: number;
     vehicleId: number;
     insuranceType: InsuranceType;
+    businessType?: null | BusinessType; // 业务类型（续保/转保，极简开单标记）
     premium: number;
     sumInsured: number;
     // 后端 start/end 与 effective/expiry 双写，前端统一用后者
@@ -37,6 +42,7 @@ export namespace PolicyApi {
     trafficPremium?: null | number;
     travelTax?: null | number;
     commercialPremium?: null | number;
+    commercialKind?: null | CommercialKind; // 商业险类型（三者/三者+车损，极简开单标记）
     surchargePremium?: null | number;
     surchargePremium2?: null | number;
     // 手续费与支出
