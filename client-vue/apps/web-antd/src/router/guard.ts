@@ -122,10 +122,9 @@ function setupAccessGuard(router: Router) {
     const userInfo = userStore.userInfo || (await authStore.fetchUserInfo());
     const userRoles = userInfo.roles ?? [];
 
-    // 确保权限码已加载：登录流程已 setAccessCodes；刷新页面 store 重置，这里补一次
-    if (!accessStore.accessCodes || accessStore.accessCodes.length === 0) {
-      accessStore.setAccessCodes(await getAccessCodesApi());
-    }
+    // 权限码每次冷启动都重取：accessCodes 随 access store 持久化，而 token 永不过期，
+    // 沿用 localStorage 旧码会让「角色权限调整/新增菜单码」在用户端永不生效（新菜单 404）
+    accessStore.setAccessCodes(await getAccessCodesApi());
     const accessCodes = new Set(accessStore.accessCodes ?? []);
 
     // 按权限码过滤后再生成菜单/路由（无 menuCode 的路由默认保留）

@@ -190,6 +190,43 @@ export async function initSchema(dataSource: DataSource): Promise<void> {
       await q('INSERT INTO commercial_insurance_type (name, sort_order) VALUES (?, ?)', [name, sortOrder]);
     }
   }
+
+  // 非车保单（non_vehicle_policy）：与 policy 平行的独立资源，无 CHECK 约束（险种为自由文本）
+  await q(`
+    CREATE TABLE IF NOT EXISTS non_vehicle_policy (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      enterprise_name TEXT NOT NULL, insurance_type TEXT NOT NULL,
+      project_name TEXT, person_in_charge TEXT, contact_phone TEXT,
+      sum_insured REAL, premium REAL, expenses REAL, balance REAL,
+      insurance_company TEXT, sales_person TEXT,
+      start_date TEXT, end_date TEXT, attachment TEXT, remark TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // 非车模块权限码：旧库免 re-seed——启动时缺则幂等补种，并给 admin 角色补授权
+  // （/auth/me 对 admin 返回全部权限码 → 菜单/按钮立即全显；其他角色走「角色权限」UI 分配）
+  const nvPerms: Array<[string, string, string, string, number]> = [
+    ['menu:non-vehicle', '非车查询', 'menu', 'non-vehicle', 12],
+    ['nonvehicle:create', '非车开单', 'action', 'non-vehicle', 1],
+    ['nonvehicle:delete', '非车删除', 'action', 'non-vehicle', 2],
+  ];
+  for (const [code, name, type, module, sort] of nvPerms) {
+    await q(
+      `INSERT INTO permission (code, name, type, module, sort)
+       SELECT ?, ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = ?)`,
+      [code, name, type, module, sort, code],
+    );
+  }
+  await q(
+    `INSERT INTO role_permission (role_id, permission_id)
+     SELECT r.id, p.id FROM role r JOIN permission p
+       ON p.code IN ('menu:non-vehicle', 'nonvehicle:create', 'nonvehicle:delete')
+     WHERE r.code = 'admin'
+       AND NOT EXISTS (SELECT 1 FROM role_permission rp WHERE rp.role_id = r.id AND rp.permission_id = p.id)`,
+  );
+  // 非车备注（表建成次日的增量列，走 ensureColumn 兼容旧库；新库建表 DDL 已含）
+  await ensureColumn(dataSource, 'non_vehicle_policy', 'remark', 'TEXT');
 }
 
 export async function ensureColumn(

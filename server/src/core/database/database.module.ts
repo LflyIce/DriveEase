@@ -4,6 +4,7 @@ import path from 'path';
 import { Customer } from '../../modules/customers/entities/customer.entity';
 import { Vehicle } from '../../modules/vehicles/entities/vehicle.entity';
 import { Policy } from '../../modules/policies/entities/policy.entity';
+import { NonVehiclePolicy } from '../../modules/non-vehicle-policies/entities/non-vehicle-policy.entity';
 import { RenewalRecord } from '../../modules/renewals/entities/renewal-record.entity';
 import { User } from '../../modules/users/entities/user.entity';
 import { OperationLog } from '../../modules/logs/entities/operation-log.entity';
@@ -30,6 +31,7 @@ const DB_PATH = path.resolve(__dirname, '..', '..', '..', 'database.sqlite');
         Customer,
         Vehicle,
         Policy,
+        NonVehiclePolicy,
         RenewalRecord,
         User,
         OperationLog,

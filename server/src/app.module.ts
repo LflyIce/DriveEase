@@ -8,6 +8,7 @@ import { LogModule } from './shared/audit/log.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { PoliciesModule } from './modules/policies/policies.module';
+import { NonVehiclePoliciesModule } from './modules/non-vehicle-policies/non-vehicle-policies.module';
 import { RenewalsModule } from './modules/renewals/renewals.module';
 import { UsersModule } from './modules/users/users.module';
 import { LogsModule } from './modules/logs/logs.module';
@@ -31,6 +32,7 @@ const appImports: any[] = [
   CustomersModule,
   VehiclesModule,
   PoliciesModule,
+  NonVehiclePoliciesModule,
   RenewalsModule,
   UsersModule,
   LogsModule,

@@ -281,3 +281,37 @@
 - 已执行：server `tsc --noEmit` 通过；前端 typecheck 13 个存量错误不变，本次文件零错误。
 - API E2E（7 组）：无筛选 pageSize=2 时 `premiumSum=3150`（全量 3 单，非页内 2 行）；`businessType=转保`→只命中测试单；`businessType=续保`→0；`salesPerson` 精确命中；`createdStart=当天`→含当日、`=次日`→0、`createdEnd=前日`→排除当日。
 - UI E2E（Playwright）：搜索区四条件渲染正常、变更即查；筛选「转保」后 footer 由 ¥3,150.00 → ¥3,000.00 联动正确，合计列右对齐于保费/保额列下。测试保单/车辆已删除。
+
+## 2026-10-28 非车查询模块 + 导航调整（车保查询/隐藏保单录入）
+
+### 背景
+
+- 车险之外的保单（雇主责任险/团意险/财产险等）需要独立的查询与极速开单入口。
+- 导航调整：保单查询改名「车保查询」，「保单录入」暂时隐藏（开单统一走极速开单抽屉）。
+
+### 变更范围
+
+- server：`schema.ts`（新表 `non_vehicle_policy` + 非车权限码幂等补种）、新增 `modules/non-vehicle-policies/`（entity/dto×2/service/controller/module）、`app.module.ts`、`database.module.ts`、`seed.ts`（权限清单同步）
+- client-vue：新增 `api/non-vehicle-policy.ts`、`views/non-vehicle-policy/`（index/data/quick-create/detail）、`router/routes/modules/driveease.ts`（改名+隐藏+新路由）、`router/guard.ts`（权限码冷启动一律重取）
+
+### 更新内容
+
+- **新表 `non_vehicle_policy`**：企业名称/险种(自由文本)/项目名称/负责人/联系电话/保额/保费/支出/结余/保险公司/业务员/起保时间/截止日期/附件(多URL逗号拼接)/创建时间(自动)。**结余=保费−支出，服务端计算为准**（前端只做展示条联动）。
+- **API**：`GET/POST/DELETE /api/v1/non-vehicle-policies(+/:id)`；list 支持关键字(企业/项目/负责人/电话)+业务员+创建时间范围，响应附 `premiumSum`/`expensesSum`/`balanceSum`（筛选下全量聚合）；`POST` 挂 `nonvehicle:create`、`DELETE` 挂 `nonvehicle:delete`。
+- **权限免 re-seed**：权限码（`menu:non-vehicle`/`nonvehicle:create`/`nonvehicle:delete`）在 `initSchema()` 末尾幂等补种并授给 admin 角色——旧库重启即生效；staff 等其他角色默认无（走「角色权限」UI 分配）。seed.ts 清单同步（新库播种一致）。
+- **页面**：非车查询（工具栏「开单」+极速开单左侧抽屉+详情抽屉+删除；footer 合计保费/支出/结余）；附件 Dragger 与车保同一套（点击+微信拖拽+进度条+页内预览）。
+- **导航**：保单查询→车保查询；保单录入 `hideInMenu`（路由保留）；非车查询挂 `menu:non-vehicle`。
+- **修复**（过程中发现的存量 bug）：`guard.ts` 原来只在 accessCodes 为空时才补取——codes 随 access store 持久化到 localStorage 而 token 永不过期，导致后台新增/调整权限后已登录用户**永远**用旧码（新菜单 404）。改为每次冷启动一律重取（一次 GET）。
+
+### 验证记录
+
+- 已执行：server `tsc --noEmit` 通过；前端 typecheck 非车文件零错误（存量 13 个不变）。
+- API E2E：开单（结余 8000−3000=5000 服务端算、created_at 自动）；list 合计/业务员/关键字筛选；详情（附件逗号拆分）；删除复原；staff（zhangsan）`/auth/me` 不含非车码且开单 403「当前角色无此操作权限」；admin `/auth/me` 含全部 32 码（权限补种生效）。
+- UI E2E（Playwright）：侧边菜单显示 车保查询/非车查询 且**无保单录入**；非车页 footer 合计列就位；极速开单抽屉 12 项必填标号正确；保费/支出输入后结余条联动 ¥5000.00。测试数据已删除。
+- 注意：新菜单码对已登录用户生效依赖上述 guard 修复（刷新即重取），否则需重新登录。
+
+### 2026-10-28 补充：非车保单增加备注字段
+
+- `non_vehicle_policy` 加 `remark TEXT`（建表 DDL + `ensureColumn` 双保险，重启自动补列）；entity/DTO/service 透传。
+- 极速开单抽屉加「备注」Textarea（选填）；详情页末行展示（空显示 `-`）；列表不加列（与车保一致）。
+- 验证：server tsc 通过；API 实测创建/详情 remark 落库读取一致（测试数据已删）。

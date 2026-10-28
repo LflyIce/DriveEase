@@ -46,13 +46,20 @@ const routes: RouteRecordRaw[] = [
         path: 'query',
         name: 'PolicyQuery',
         component: () => import('#/views/policy/index.vue'),
-        meta: { title: '保单查询' },
+        meta: { title: '车保查询' },
       },
       {
         path: 'create',
         name: 'PolicyCreate',
         component: () => import('#/views/policy/create.vue'),
-        meta: { title: '保单录入' },
+        // 暂时隐藏：开单统一走车保/非车的极速开单抽屉；路由保留可直达
+        meta: { hideInMenu: true, title: '保单录入' },
+      },
+      {
+        path: 'non-vehicle',
+        name: 'NonVehicleQuery',
+        component: () => import('#/views/non-vehicle-policy/index.vue'),
+        meta: { menuCode: 'menu:non-vehicle', title: '非车查询' },
       },
     ],
   },
