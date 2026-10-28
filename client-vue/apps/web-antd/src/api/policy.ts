@@ -108,6 +108,9 @@ export namespace PolicyApi {
     total: number;
     page: number;
     pageSize: number;
+    // 保费/保额合计（后端按当前筛选条件全量聚合，非当前页小计；列表 footer 用）
+    premiumSum?: number;
+    sumInsuredSum?: number;
   }
 }
 
@@ -129,6 +132,8 @@ export async function getPolicyList(params: Recordable<any>) {
       vehicleModel: p.vehicle?.model,
     })),
     total: res.total,
+    premiumSum: res.premiumSum,
+    sumInsuredSum: res.sumInsuredSum,
   };
 }
 

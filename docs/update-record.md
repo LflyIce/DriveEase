@@ -257,3 +257,27 @@
 - API E2E（dev 环境实测，watch 重启后新列自动补齐）：同车牌带 `businessType=转保` 提交 → 成功且 `vehicleId` 复用原车辆、`businessType=转保`/`commercialKind=三者+车损` 落库正确；同车牌不带 `businessType` → 400「该车牌已录入」。
 - UI E2E（Playwright 实测）：开单抽屉「商业险保费」一行渲染为 `[三者 ▾][金额输入框]`，无独立「商业险类型」行；方案下拉切到「三者+车损」后选中项即时更新（vben `computedProps` 是 computed，componentProps 函数内读 ref 会建立依赖 → 换值重渲）；完整走单（传材料+提交）抓包确认请求体含 `commercialKind:"三者+车损"`/`businessType:"续保"`，列表新增行「业务类型」列显示「续保」Tag。测试保单/车辆/材料已删除，临时 png 已清理。
 - 坑：Git Bash 的 `curl -d` 直接内联中文会按本地编码发出（落库乱码），中文 JSON 体须经 UTF-8 文件 `--data-binary @file` 发送。
+
+## 2026-10-28 保单查询：新增筛选条件 + 保费/保额底部合计
+
+### 背景
+
+- 保单查询只有关键字/状态筛选，缺业务员、业务类型、创建时间范围；保费/保额需要底部合计。
+- `policy.created_at` 字段已存在（`DATETIME DEFAULT CURRENT_TIMESTAMP`，开单自动写当前时间，无需选择/传参），故只加查询条件，不动表结构。
+
+### 变更范围
+
+- server：`query-policy.dto.ts`（+`salesPerson`/`businessType`/`createdStart`/`createdEnd`）、`policies.controller.ts`、`policies.service.ts`（findMany 改收整个 DTO 对象）
+- client-vue：`api/policy.ts`、`views/policy/data.ts`、`views/policy/index.vue`
+
+### 更新内容
+
+- **筛选条件**：`GET /policies` 的 WHERE 新增 `p.sales_person=?`、`p.business_type=?`、`p.created_at` 范围（止点无时间部分自动补 `23:59:59` 含当日）；与数据查询同一 WHERE，count/合计/行三者口径一致。搜索区新增：创建时间 RangePicker（提交时拆成 createdStart/createdEnd）、业务员 ApiSelect、业务类型 Select，均可清空、变更即查。
+- **保费/保额合计**：count SQL 合并为 `COUNT(*) + SUM(premium) + SUM(sum_insured)`，响应新增 `premiumSum`/`sumInsuredSum`——**按当前筛选条件全量聚合，非当前页小计**（分页下页内合计会误导）；前端 vxe `showFooter + footerMethod`，footer 行在保费/保额列下方显示 `¥` 千分位合计，首列「合计」。
+- **展示**：列表「到期日期」后新增「创建时间」列（`created_at` 截取 `YYYY-MM-DD HH:MM`）。
+
+### 验证记录
+
+- 已执行：server `tsc --noEmit` 通过；前端 typecheck 13 个存量错误不变，本次文件零错误。
+- API E2E（7 组）：无筛选 pageSize=2 时 `premiumSum=3150`（全量 3 单，非页内 2 行）；`businessType=转保`→只命中测试单；`businessType=续保`→0；`salesPerson` 精确命中；`createdStart=当天`→含当日、`=次日`→0、`createdEnd=前日`→排除当日。
+- UI E2E（Playwright）：搜索区四条件渲染正常、变更即查；筛选「转保」后 footer 由 ¥3,150.00 → ¥3,000.00 联动正确，合计列右对齐于保费/保额列下。测试保单/车辆已删除。

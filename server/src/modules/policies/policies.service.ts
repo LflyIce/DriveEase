@@ -6,6 +6,7 @@ import { PaginatedResult } from '../../shared/dto/paginated-result';
 import { CreatePolicyDto } from './dto/create-policy.dto';
 import { UpdatePolicyDto } from './dto/update-policy.dto';
 import { CreatePolicyFullDto } from './dto/create-policy-full.dto';
+import { QueryPolicyDto } from './dto/query-policy.dto';
 import { Policy } from './entities/policy.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { Vehicle } from '../vehicles/entities/vehicle.entity';
@@ -24,40 +25,57 @@ export class PoliciesService {
   ) {}
 
   async findMany(
-    page = 1,
-    pageSize = 10,
-    keyword?: string,
-    status?: string,
-    expiryWithin?: number,
-  ): Promise<PaginatedResult<any>> {
+    query: QueryPolicyDto,
+  ): Promise<PaginatedResult<any> & { premiumSum: number; sumInsuredSum: number }> {
+    const { page = 1, pageSize = 10 } = query;
     const conditions: string[] = [];
     const params: any[] = [];
-    if (keyword) {
+    if (query.keyword) {
       conditions.push('(p.policy_number LIKE ? OR c.name LIKE ? OR c.phone LIKE ? OR v.plate_number LIKE ?)');
-      const kw = `%${keyword}%`;
+      const kw = `%${query.keyword}%`;
       params.push(kw, kw, kw, kw);
     }
-    if (status) {
+    if (query.status) {
       conditions.push('p.status = ?');
-      params.push(status);
+      params.push(query.status);
     }
     // 到期窗口：未来 N 天内到期且未过期（expiry_date 存 'YYYY-MM-DD'，字典序即日期序）
-    if (expiryWithin && expiryWithin > 0) {
+    if (query.expiryWithin && query.expiryWithin > 0) {
       const pad = (n: number) => String(n).padStart(2, '0');
       const now = new Date();
       const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-      const futureDate = new Date(now.getTime() + expiryWithin * 24 * 3600 * 1000);
+      const futureDate = new Date(now.getTime() + query.expiryWithin * 24 * 3600 * 1000);
       const future = `${futureDate.getFullYear()}-${pad(futureDate.getMonth() + 1)}-${pad(futureDate.getDate())}`;
       conditions.push('(p.expiry_date IS NOT NULL AND p.expiry_date >= ? AND p.expiry_date <= ?)');
       params.push(today, future);
     }
+    if (query.salesPerson) {
+      conditions.push('p.sales_person = ?');
+      params.push(query.salesPerson);
+    }
+    if (query.businessType) {
+      conditions.push('p.business_type = ?');
+      params.push(query.businessType);
+    }
+    // 创建时间范围：created_at 存 'YYYY-MM-DD HH:MM:SS'，字典序即时间序；止点无时间部分补 23:59:59 含当日
+    if (query.createdStart) {
+      conditions.push('p.created_at >= ?');
+      params.push(query.createdStart.includes(':') ? query.createdStart : `${query.createdStart} 00:00:00`);
+    }
+    if (query.createdEnd) {
+      conditions.push('p.created_at <= ?');
+      params.push(query.createdEnd.includes(':') ? query.createdEnd : `${query.createdEnd} 23:59:59`);
+    }
     const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
 
-    const totalRows = (await this.dataSource.query(
-      `SELECT COUNT(*) as count ${POLICY_LIST_FROM} ${where}`,
+    // count 与保费/保额合计共用一条 SQL（与数据行同一 WHERE，口径一致；合计跟筛选走，非当前页小计）
+    const statRows = (await this.dataSource.query(
+      `SELECT COUNT(*) as count, COALESCE(SUM(p.premium), 0) as premium_sum,
+              COALESCE(SUM(p.sum_insured), 0) as sum_insured_sum
+       ${POLICY_LIST_FROM} ${where}`,
       params,
     )) as any[];
-    const total = totalRows[0]?.count || 0;
+    const total = statRows[0]?.count || 0;
     const data = (await this.dataSource.query(
       `SELECT p.*, c.name as customer_name, c.phone as customer_phone,
               v.plate_number, v.brand as vehicle_brand, v.model as vehicle_model
@@ -73,7 +91,14 @@ export class PoliciesService {
         ? { id: row.vehicle_id, plate_number: row.plate_number, brand: row.vehicle_brand, model: row.vehicle_model }
         : null,
     }));
-    return { data: formatted, total, page: Number(page), pageSize: Number(pageSize) };
+    return {
+      data: formatted,
+      total,
+      page: Number(page),
+      pageSize: Number(pageSize),
+      premiumSum: Number(statRows[0]?.premium_sum) || 0,
+      sumInsuredSum: Number(statRows[0]?.sum_insured_sum) || 0,
+    };
   }
 
   // 详情：保单全字段 + 关联客户/车辆全字段（含证件照片 URL）。

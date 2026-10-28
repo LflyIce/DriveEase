@@ -18,15 +18,9 @@ export class PoliciesController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: '保单列表（分页+关键字+状态，关键字跨客户/车辆）' })
+  @ApiOperation({ summary: '保单列表（分页+关键字+状态+业务员+业务类型+创建时间范围，关键字跨客户/车辆；附保费/保额合计）' })
   findMany(@Query() query: QueryPolicyDto) {
-    return this.policiesService.findMany(
-      query.page,
-      query.pageSize,
-      query.keyword,
-      query.status,
-      query.expiryWithin,
-    );
+    return this.policiesService.findMany(query);
   }
 
   @Get(':id')

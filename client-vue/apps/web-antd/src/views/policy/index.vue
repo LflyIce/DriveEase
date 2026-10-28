@@ -13,7 +13,7 @@ import dayjs from 'dayjs';
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { deletePolicy, getPolicyList, updatePolicyStatus } from '#/api/policy';
 
-import { useColumns, useGridFormSchema } from './data';
+import { formatMoney, useColumns, useGridFormSchema } from './data';
 import DetailDrawer from './modules/detail.vue';
 import EditDrawer from './modules/edit.vue';
 import QuickCreateDrawer from './modules/quick-create.vue';
@@ -57,6 +57,10 @@ const quickCreateRef = ref();
 /** 到期快捷筛选窗口（天）：undefined=不过滤；30=月内到期；10=10日内到期 */
 const expiryWithin = ref<number | undefined>();
 
+// 保费/保额合计：后端按当前筛选条件全量聚合随列表返回（非当前页小计），footerMethod 消费
+const premiumSum = ref(0);
+const sumInsuredSum = ref(0);
+
 const [Grid, gridApi] = useVbenVxeGrid({
   formOptions: {
     commonConfig: { labelWidth: 60 },
@@ -65,20 +69,38 @@ const [Grid, gridApi] = useVbenVxeGrid({
   },
   gridOptions: {
     columns: useColumns(),
+    footerMethod: ({ columns }) => [
+      columns.map((col, idx) => {
+        if (idx === 0) return '合计';
+        if (col.field === 'premium') return formatMoney(premiumSum.value);
+        if (col.field === 'sumInsured') return formatMoney(sumInsuredSum.value);
+        return '';
+      }),
+    ],
     height: 'auto',
     keepSource: true,
     proxyConfig: {
       ajax: {
-        query: async ({ page }, formValues) =>
-          await getPolicyList({
+        query: async ({ page }, formValues) => {
+          // 创建时间 RangePicker 给 dayjs 数组，拆成后端的 createdStart/createdEnd 日期
+          const { createdRange, ...rest } = formValues as Record<string, any>;
+          const [start, end] = createdRange ?? [];
+          const res = await getPolicyList({
             page: page.currentPage,
             pageSize: page.pageSize,
-            ...formValues,
+            ...rest,
+            createdStart: start ? dayjs(start).format('YYYY-MM-DD') : undefined,
+            createdEnd: end ? dayjs(end).format('YYYY-MM-DD') : undefined,
             expiryWithin: expiryWithin.value,
-          }),
+          });
+          premiumSum.value = res.premiumSum ?? 0;
+          sumInsuredSum.value = res.sumInsuredSum ?? 0;
+          return res;
+        },
       },
     },
     rowConfig: { keyField: 'id' },
+    showFooter: true,
     toolbarConfig: { custom: true, refresh: true, search: true, zoom: true },
   } as VxeTableGridOptions<PolicyApi.Policy>,
 });

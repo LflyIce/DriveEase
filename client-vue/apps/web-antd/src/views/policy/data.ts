@@ -19,8 +19,8 @@ export const STATUS_OPTIONS = [
   { label: '已退保', value: '已退保' },
 ];
 
-/** 金额格式化：¥1,234.00 */
-function formatMoney(value: any): string {
+/** 金额格式化：¥1,234.00（列表列与 footer 合计共用） */
+export function formatMoney(value: any): string {
   return value != null && value !== ''
     ? `¥${Number(value).toLocaleString('zh-CN', {
         minimumFractionDigits: 2,
@@ -47,6 +47,34 @@ export function useGridFormSchema(): VbenFormSchema[] {
       },
       fieldName: 'status',
       label: '状态',
+    },
+    {
+      component: 'RangePicker',
+      componentProps: { style: 'width:100%' },
+      fieldName: 'createdRange',
+      label: '创建时间',
+    },
+    {
+      component: 'ApiSelect',
+      componentProps: {
+        api: async () => (await getUserList({ page: 1, pageSize: 1000 })).items,
+        allowClear: true,
+        labelField: 'username',
+        placeholder: '全部',
+        valueField: 'username',
+      },
+      fieldName: 'salesPerson',
+      label: '业务员',
+    },
+    {
+      component: 'Select',
+      componentProps: {
+        options: BUSINESS_TYPE_OPTIONS,
+        allowClear: true,
+        placeholder: '全部',
+      },
+      fieldName: 'businessType',
+      label: '业务类型',
     },
   ];
 }
@@ -97,6 +125,13 @@ export function useColumns(): VxeTableGridColumns {
     },
     { field: 'effectiveDate', title: '起保日期', width: 120 },
     { field: 'expiryDate', title: '到期日期', width: 120 },
+    {
+      field: 'createdAt',
+      formatter: ({ cellValue }) =>
+        cellValue ? String(cellValue).slice(0, 16) : '-',
+      title: '创建时间',
+      width: 140,
+    },
     {
       align: 'center',
       field: 'status',
