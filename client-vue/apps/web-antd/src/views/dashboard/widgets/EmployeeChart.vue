@@ -6,10 +6,10 @@ import { onMounted, ref, watch } from 'vue';
 import { EchartsUI, useEcharts } from '@vben/plugins/echarts';
 
 import { useDashboardData } from '../useDashboardData';
-import { C_BLUE } from './constants';
+import { C_AQUA, C_BLUE } from './constants';
 import { useChartCarousel } from './useChartCarousel';
 
-/** 员工开单数（横向柱状图） */
+/** 员工开单数（横向柱状图，车保/非车两根柱并排） */
 const chartRef = ref();
 const { renderEcharts, getChartInstance } = useEcharts(chartRef);
 const carousel = useChartCarousel(getChartInstance);
@@ -19,8 +19,9 @@ async function render(s: StatsApi.Dashboard | undefined) {
   if (!s) return;
   const emp = s.employeeRanking ?? [];
   await renderEcharts({
-    color: [C_BLUE],
-    grid: { bottom: 20, left: 90, right: 48, top: 20 },
+    color: [C_BLUE, C_AQUA],
+    grid: { bottom: 20, left: 90, right: 48, top: 36 },
+    legend: { right: 0, top: 0 },
     // className 供全局 CSS 压低 tooltip 层级（默认 9999999 会盖住弹窗）
     tooltip: {
       axisPointer: { type: 'shadow' },
@@ -36,9 +37,16 @@ async function render(s: StatsApi.Dashboard | undefined) {
     series: [
       {
         barMaxWidth: 30,
-        data: emp.map((e) => e.value),
+        data: emp.map((e) => e.vehicle),
         itemStyle: { borderRadius: [0, 4, 4, 0], color: C_BLUE },
-        name: '开单数',
+        name: '车保',
+        type: 'bar',
+      },
+      {
+        barMaxWidth: 30,
+        data: emp.map((e) => e.nonVehicle),
+        itemStyle: { borderRadius: [0, 4, 4, 0], color: C_AQUA },
+        name: '非车',
         type: 'bar',
       },
     ],

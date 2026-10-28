@@ -10,6 +10,7 @@ import dayjs from 'dayjs';
 import { useVbenForm } from '#/adapter/form';
 import { createPolicyFull } from '#/api/policy';
 import { requestClient } from '#/api/request';
+import { enterToNextRequired } from '#/views/shared/enter-to-next';
 
 import { useQuickCreateSchema } from '../data';
 
@@ -116,6 +117,18 @@ function show() {
 
 defineExpose({ show });
 
+/** 回车跳下一必填项（备注 textarea 保留换行不跳；之后无必填项则不动） */
+function onFormEnter(e: KeyboardEvent) {
+  if (e.key !== 'Enter') return;
+  const target = e.target as HTMLElement;
+  if (target.tagName === 'TEXTAREA') return;
+  const next = enterToNextRequired(e.currentTarget as HTMLElement, target);
+  if (next) {
+    e.preventDefault();
+    next.focus();
+  }
+}
+
 function reset() {
   formApi.resetForm();
   fileList.value = [];
@@ -195,7 +208,9 @@ async function onSubmit() {
       续保/转保时，已录入车牌将自动复用车辆资料；同手机号客户自动复用，不覆盖已有资料。
     </div>
 
-    <Form />
+    <div @keydown.capture="onFormEnter">
+      <Form />
+    </div>
 
     <!-- 合计保费：自动计算展示条（= 交强 + 商业 + 非车，非表单字段） -->
     <div

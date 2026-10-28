@@ -10,6 +10,7 @@ import dayjs from 'dayjs';
 import { useVbenForm } from '#/adapter/form';
 import { createNonVehiclePolicy } from '#/api/non-vehicle-policy';
 import { requestClient } from '#/api/request';
+import { enterToNextRequired } from '#/views/shared/enter-to-next';
 
 import { useQuickCreateSchema } from '../data';
 
@@ -105,6 +106,18 @@ function show() {
 
 defineExpose({ show });
 
+/** 回车跳下一必填项（备注 textarea 保留换行不跳；之后无必填项则不动） */
+function onFormEnter(e: KeyboardEvent) {
+  if (e.key !== 'Enter') return;
+  const target = e.target as HTMLElement;
+  if (target.tagName === 'TEXTAREA') return;
+  const next = enterToNextRequired(e.currentTarget as HTMLElement, target);
+  if (next) {
+    e.preventDefault();
+    next.focus();
+  }
+}
+
 function reset() {
   formApi.resetForm();
   fileList.value = [];
@@ -178,7 +191,9 @@ async function onSubmit() {
       非车保单按企业录入；结余 = 保费 − 支出，自动计算无需填写。
     </div>
 
-    <Form />
+    <div @keydown.capture="onFormEnter">
+      <Form />
+    </div>
 
     <!-- 结余：自动计算展示条（= 保费 − 支出，可为负） -->
     <div

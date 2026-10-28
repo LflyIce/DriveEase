@@ -28,9 +28,11 @@ export interface WidgetDef {
 }
 
 export const WIDGETS: Record<string, WidgetDef> = {
+  // 车保/非车分列的 6 张 KPI（一行各占 2 格）；复用旧 id（kpi-today-policy/kpi-sum-insured）
+  // 让已保存布局的用户标题/口径自动更新，新增 2 张需「添加卡片」或重置布局
   'kpi-today-policy': {
     component: KpiCard,
-    defaultLayout: { h: 2, w: 3, x: 0, y: 0 },
+    defaultLayout: { h: 2, w: 2, x: 0, y: 0 },
     hideHeader: true,
     id: 'kpi-today-policy',
     minH: 2,
@@ -40,14 +42,31 @@ export const WIDGETS: Record<string, WidgetDef> = {
       color: '#1677ff',
       decimals: 0,
       icon: 'lucide:file-plus-2',
-      title: '今日保单数',
-      valueKey: 'todayPolicyCount',
+      title: '今日车保单数',
+      valueKey: 'todayVehiclePolicyCount',
     },
-    title: '今日保单数',
+    title: '今日车保单数',
+  },
+  'kpi-today-non-vehicle': {
+    component: KpiCard,
+    defaultLayout: { h: 2, w: 2, x: 2, y: 0 },
+    hideHeader: true,
+    id: 'kpi-today-non-vehicle',
+    minH: 2,
+    minW: 2,
+    props: {
+      bg: '#e6fffb',
+      color: '#13c2c2',
+      decimals: 0,
+      icon: 'lucide:file-stack',
+      title: '今日非车单数',
+      valueKey: 'todayNonVehicleCount',
+    },
+    title: '今日非车单数',
   },
   'kpi-traffic-premium': {
     component: KpiCard,
-    defaultLayout: { h: 2, w: 3, x: 3, y: 0 },
+    defaultLayout: { h: 2, w: 2, x: 4, y: 0 },
     hideHeader: true,
     id: 'kpi-traffic-premium',
     minH: 2,
@@ -64,7 +83,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
   },
   'kpi-commercial-premium': {
     component: KpiCard,
-    defaultLayout: { h: 2, w: 3, x: 6, y: 0 },
+    defaultLayout: { h: 2, w: 2, x: 6, y: 0 },
     hideHeader: true,
     id: 'kpi-commercial-premium',
     minH: 2,
@@ -81,7 +100,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
   },
   'kpi-sum-insured': {
     component: KpiCard,
-    defaultLayout: { h: 2, w: 3, x: 9, y: 0 },
+    defaultLayout: { h: 2, w: 2, x: 8, y: 0 },
     hideHeader: true,
     id: 'kpi-sum-insured',
     minH: 2,
@@ -91,10 +110,27 @@ export const WIDGETS: Record<string, WidgetDef> = {
       color: '#722ed1',
       decimals: 2,
       icon: 'lucide:landmark',
-      title: '保额',
-      valueKey: 'sumInsuredTotal',
+      title: '车保保额',
+      valueKey: 'vehicleSumInsuredTotal',
     },
-    title: '保额',
+    title: '车保保额',
+  },
+  'kpi-non-vehicle-sum-insured': {
+    component: KpiCard,
+    defaultLayout: { h: 2, w: 2, x: 10, y: 0 },
+    hideHeader: true,
+    id: 'kpi-non-vehicle-sum-insured',
+    minH: 2,
+    minW: 2,
+    props: {
+      bg: '#fff0f6',
+      color: '#eb2f96',
+      decimals: 2,
+      icon: 'lucide:landmark',
+      title: '非车保额',
+      valueKey: 'nonVehicleSumInsuredTotal',
+    },
+    title: '非车保额',
   },
   'chart-employee': {
     component: EmployeeChart,

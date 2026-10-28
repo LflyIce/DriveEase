@@ -9,7 +9,7 @@ import { useDashboardData } from '../useDashboardData';
 import { CHART_COLORS } from './constants';
 import { useChartCarousel } from './useChartCarousel';
 
-/** 保费占比（实心饼图：交强险/商业险/非车险） */
+/** 保费占比（实心饼图：交强险/商业险/随车非车险/非车保单——车保与非车分列） */
 const chartRef = ref();
 const { renderEcharts, getChartInstance } = useEcharts(chartRef);
 const carousel = useChartCarousel(getChartInstance);
@@ -17,7 +17,12 @@ const { stats } = useDashboardData();
 
 async function render(s: StatsApi.Dashboard | undefined) {
   if (!s) return;
-  const pm = s.premiumMix ?? { commercial: 0, surcharge: 0, traffic: 0 };
+  const pm = s.premiumMix ?? {
+    commercial: 0,
+    nonVehiclePremium: 0,
+    surcharge: 0,
+    traffic: 0,
+  };
   await renderEcharts({
     color: CHART_COLORS,
     legend: { bottom: 0 },
@@ -29,7 +34,8 @@ async function render(s: StatsApi.Dashboard | undefined) {
         data: [
           { name: '交强险', value: pm.traffic },
           { name: '商业险', value: pm.commercial },
-          { name: '非车险', value: pm.surcharge },
+          { name: '随车非车险', value: pm.surcharge },
+          { name: '非车保单', value: pm.nonVehiclePremium },
         ],
         label: { formatter: '{b}: {d}%' },
         radius: ['0', '70%'],
@@ -37,7 +43,7 @@ async function render(s: StatsApi.Dashboard | undefined) {
       },
     ],
   });
-  carousel.start(3);
+  carousel.start(4);
 }
 
 watch(stats, render);
