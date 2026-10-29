@@ -10,6 +10,7 @@ export class CreateNonVehiclePolicyDto {
   @ApiPropertyOptional() @IsOptional() contactPhone?: any;
   @ApiPropertyOptional() @IsOptional() sumInsured?: any;
   @ApiPropertyOptional() @IsOptional() premium?: any;
+  @ApiPropertyOptional() @IsOptional() fee?: any;
   @ApiPropertyOptional() @IsOptional() expenses?: any;
   @ApiPropertyOptional() @IsOptional() insuranceCompany?: any;
   @ApiPropertyOptional() @IsOptional() salesPerson?: any;

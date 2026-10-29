@@ -69,6 +69,13 @@ export function useColumns(): VxeTableGridColumns {
     },
     {
       align: 'right',
+      field: 'fee',
+      formatter: ({ cellValue }) => formatMoney(cellValue),
+      title: '费用',
+      width: 110,
+    },
+    {
+      align: 'right',
       field: 'expenses',
       formatter: ({ cellValue }) => formatMoney(cellValue),
       title: '支出',
@@ -84,7 +91,12 @@ export function useColumns(): VxeTableGridColumns {
     { field: 'insuranceCompany', title: '保险公司', width: 120 },
     { field: 'salesPerson', title: '业务员', width: 90 },
     { field: 'startDate', title: '起保时间', width: 110 },
-    { field: 'endDate', title: '截止日期', width: 110 },
+    {
+      field: 'endDate',
+      slots: { default: 'endDate' },
+      title: '截止日期',
+      width: 110,
+    },
     {
       field: 'createdAt',
       formatter: ({ cellValue }) =>
@@ -105,12 +117,13 @@ export function useColumns(): VxeTableGridColumns {
 
 /* ============================================================
  * 极速开单抽屉（非车查询页工具栏「开单」入口，modules/quick-create.vue）
- * 单列精简表单；结余 = 保费 - 支出 为联动展示条（非表单字段，后端为准重算）；
+ * 单列精简表单；结余 = 费用 - 支出 为联动展示条（非表单字段，后端为准重算）；
+ * 项目名称/保额/保费/费用/支出均必填（0 为合法金额）；
  * 附件多文件 URL 逗号拼接存 attachment（与车保 quotation 同方案）。
  * ============================================================ */
 
 /**
- * 极速开单表单。onBalanceChange：保费/支出变化时回调结余（展示条呈现，可为负）。
+ * 极速开单表单。onBalanceChange：费用/支出变化时回调结余（展示条呈现，可为负）。
  */
 export function useQuickCreateSchema(
   onBalanceChange?: (balance: number) => void,
@@ -124,12 +137,13 @@ export function useQuickCreateSchema(
       style: 'width:100%',
       onChange: (val: any) => {
         const m = { ...values, [fieldName]: val };
-        const balance = (Number(m.premium) || 0) - (Number(m.expenses) || 0);
+        const balance = (Number(m.fee) || 0) - (Number(m.expenses) || 0);
         onBalanceChange?.(Math.round(balance * 100) / 100);
       },
     }),
     fieldName,
     label,
+    rules: 'required',
   });
   return [
     {
@@ -146,7 +160,12 @@ export function useQuickCreateSchema(
       label: '险种',
       rules: 'required',
     },
-    { component: 'Input', fieldName: 'projectName', label: '项目名称' },
+    {
+      component: 'Input',
+      fieldName: 'projectName',
+      label: '项目名称',
+      rules: 'required',
+    },
     {
       component: 'Input',
       fieldName: 'personInCharge',
@@ -165,8 +184,10 @@ export function useQuickCreateSchema(
       componentProps: { min: 0, style: 'width:100%' },
       fieldName: 'sumInsured',
       label: '保额',
+      rules: 'required',
     },
     numLinked('premium', '保费'),
+    numLinked('fee', '费用'),
     numLinked('expenses', '支出'),
     {
       component: 'ApiSelect',

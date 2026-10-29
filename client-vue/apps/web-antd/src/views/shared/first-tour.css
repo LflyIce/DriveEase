@@ -1,0 +1,118 @@
+/**
+ * driver.js 引导气泡主题化：贴合 vben 设计令牌（hsl 分量变量，随明暗主题自动切换）。
+ * 需在 driver.css 之后引入；popoverClass 传 de-tour-popover 生效。
+ */
+.de-tour-popover.driver-popover {
+  font-family: var(--font-family);
+  background-color: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) + 2px);
+  padding: 14px 16px;
+  min-width: 260px;
+  max-width: 330px;
+  box-shadow:
+    0 6px 16px 4px hsl(0deg 0% 0% / 8%),
+    0 9px 28px 8px hsl(0deg 0% 0% / 5%);
+}
+
+.dark .de-tour-popover.driver-popover {
+  box-shadow:
+    0 6px 16px 4px hsl(0deg 0% 0% / 32%),
+    0 9px 28px 8px hsl(0deg 0% 0% / 24%);
+}
+
+/* 标题/正文/进度：对齐系统卡片字号层级 */
+.de-tour-popover .driver-popover-title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.6;
+  color: hsl(var(--popover-foreground));
+}
+
+.de-tour-popover .driver-popover-description {
+  font-size: 13px;
+  line-height: 1.7;
+  margin-top: 6px;
+  color: hsl(var(--muted-foreground));
+}
+
+.de-tour-popover .driver-popover-progress-text {
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+}
+
+.de-tour-popover .driver-popover-close-btn {
+  color: hsl(var(--muted-foreground));
+}
+
+.de-tour-popover .driver-popover-close-btn:hover,
+.de-tour-popover .driver-popover-close-btn:focus-visible {
+  color: hsl(var(--popover-foreground));
+}
+
+/* 底部按钮：默认态对齐 antd default 按钮（透明底 + 描边） */
+.de-tour-popover .driver-popover-footer-btn {
+  padding: 4px 14px;
+  font-size: 12px;
+  line-height: 20px;
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid hsl(var(--border));
+  background-color: transparent;
+  color: hsl(var(--popover-foreground));
+  transition:
+    color 0.2s,
+    background-color 0.2s,
+    border-color 0.2s,
+    opacity 0.2s;
+}
+
+.de-tour-popover .driver-popover-footer-btn:hover,
+.de-tour-popover .driver-popover-footer-btn:focus {
+  background-color: hsl(var(--accent));
+  border-color: hsl(var(--accent-hover));
+}
+
+/* 下一步/知道了（末位按钮）：主色实心，对齐 antd primary */
+.de-tour-popover .driver-popover-navigation-btns button:last-child {
+  font-weight: 500;
+  background-color: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.de-tour-popover .driver-popover-navigation-btns button:last-child:hover,
+.de-tour-popover .driver-popover-navigation-btns button:last-child:focus {
+  background-color: hsl(var(--primary) / 85%);
+  border-color: hsl(var(--primary) / 85%);
+  color: hsl(var(--primary-foreground));
+}
+
+/* 气泡箭头随底色（四边透明规则与 driver 原生一致，仅换色） */
+.de-tour-popover .driver-popover-arrow {
+  border-color: hsl(var(--popover));
+}
+
+.de-tour-popover .driver-popover-arrow-side-left {
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  border-right-color: transparent;
+}
+
+.de-tour-popover .driver-popover-arrow-side-right {
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  border-left-color: transparent;
+}
+
+.de-tour-popover .driver-popover-arrow-side-top {
+  border-bottom-color: transparent;
+  border-left-color: transparent;
+  border-right-color: transparent;
+}
+
+.de-tour-popover .driver-popover-arrow-side-bottom {
+  border-top-color: transparent;
+  border-left-color: transparent;
+  border-right-color: transparent;
+}

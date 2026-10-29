@@ -87,6 +87,9 @@ defineExpose({ show });
           <DescriptionsItem label="保费">
             {{ formatMoney(detail.premium) }}
           </DescriptionsItem>
+          <DescriptionsItem label="费用">
+            {{ formatMoney(detail.fee) }}
+          </DescriptionsItem>
           <DescriptionsItem label="支出">
             {{ formatMoney(detail.expenses) }}
           </DescriptionsItem>

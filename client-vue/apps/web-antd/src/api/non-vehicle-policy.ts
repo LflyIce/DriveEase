@@ -12,8 +12,9 @@ export namespace NonVehiclePolicyApi {
     contactPhone?: null | string;
     sumInsured?: null | number;
     premium?: null | number;
+    fee?: null | number; // 费用（金额，与保费同类型）
     expenses?: null | number;
-    balance?: null | number; // 结余 = 保费 - 支出（后端计算）
+    balance?: null | number; // 结余 = 费用 - 支出（后端计算，保费不参与）
     insuranceCompany?: null | string;
     salesPerson?: null | string;
     startDate?: null | string; // 起保时间
@@ -31,6 +32,7 @@ export namespace NonVehiclePolicyApi {
     pageSize: number;
     // 合计（后端按当前筛选条件全量聚合，footer 用）
     premiumSum?: number;
+    feeSum?: number;
     expensesSum?: number;
     balanceSum?: number;
   }
@@ -48,6 +50,7 @@ export async function getNonVehiclePolicyList(params: Recordable<any>) {
     items: res.data,
     total: res.total,
     premiumSum: res.premiumSum,
+    feeSum: res.feeSum,
     expensesSum: res.expensesSum,
     balanceSum: res.balanceSum,
   };

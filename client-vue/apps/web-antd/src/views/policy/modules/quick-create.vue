@@ -11,6 +11,7 @@ import { useVbenForm } from '#/adapter/form';
 import { createPolicyFull } from '#/api/policy';
 import { requestClient } from '#/api/request';
 import { enterToNextRequired } from '#/views/shared/enter-to-next';
+import { runFirstTour } from '#/views/shared/first-tour';
 
 import { useQuickCreateSchema } from '../data';
 
@@ -112,6 +113,29 @@ function show() {
       policyDate: dayjs(),
       salesPerson: userStore.userInfo?.username,
     });
+    // 首次开单导览（driver.js 高亮分步）：看完/退出记 localStorage 后不再演（改步骤换 key 版本号）
+    runFirstTour('driveease_tip_policy_quickcreate_v1', [
+      {
+        element: '.de-tour-intro',
+        popover: { title: '开单小提示', description: '首次开单看这里，跟着高亮走一遍即可。' },
+      },
+      {
+        element: '.de-tour-form',
+        popover: { title: '必填信息', description: '带 * 为必填项；表单内按回车可跳到下一个必填项。' },
+      },
+      {
+        element: '.de-tour-total',
+        popover: { title: '合计保费', description: '= 交强 + 商业 + 非车，自动计算无需填写。' },
+      },
+      {
+        element: '.de-tour-upload',
+        popover: { title: '材料上传', description: '材料必传；支持将微信聊天中的图片/文件直接拖入。' },
+      },
+      {
+        element: '.de-tour-submit',
+        popover: { title: '提交', description: '填完后点「提交开单」完成录入。' },
+      },
+    ]);
   });
 }
 
@@ -201,20 +225,20 @@ async function onSubmit() {
 
 <template>
   <Drawer v-model:open="open" placement="left" title="极简开单" :width="520">
-    <!-- 业务规则提示：一车一保单 / 客户按手机号复用 -->
+    <!-- 业务规则提示：一车一保单 / 客户按手机号复用（de-tour-intro：首次导览锚点） -->
     <div
-      class="mb-3 rounded-md bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-400 dark:bg-gray-800/60"
+      class="de-tour-intro mb-3 rounded-md bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-400 dark:bg-gray-800/60"
     >
       续保/转保时，已录入车牌将自动复用车辆资料；同手机号客户自动复用，不覆盖已有资料。
     </div>
 
-    <div @keydown.capture="onFormEnter">
+    <div class="de-tour-form" @keydown.capture="onFormEnter">
       <Form />
     </div>
 
-    <!-- 合计保费：自动计算展示条（= 交强 + 商业 + 非车，非表单字段） -->
+    <!-- 合计保费：自动计算展示条（= 交强 + 商业 + 非车，非表单字段；de-tour-total 导览锚点） -->
     <div
-      class="mb-2 mt-1 flex items-center justify-between rounded-md bg-gray-50 px-3 py-2 dark:bg-gray-800/60"
+      class="de-tour-total mb-2 mt-1 flex items-center justify-between rounded-md bg-gray-50 px-3 py-2 dark:bg-gray-800/60"
     >
       <span class="text-sm text-gray-500">
         合计保费
@@ -225,8 +249,8 @@ async function onSubmit() {
       </span>
     </div>
 
-    <!-- 材料：独立 Dragger 区（点击 + 微信拖拽），不在 useVbenForm 内 -->
-    <div class="mt-2">
+    <!-- 材料：独立 Dragger 区（点击 + 微信拖拽），不在 useVbenForm 内（de-tour-upload 导览锚点） -->
+    <div class="de-tour-upload mt-2">
       <div class="mb-2 text-sm">
         <span class="text-red-500">*</span> 材料
         <span class="ml-2 text-xs font-normal text-gray-400">
@@ -252,7 +276,7 @@ async function onSubmit() {
     <template #footer>
       <div class="flex justify-end gap-2">
         <Button @click="open = false">取 消</Button>
-        <Button :loading="saving" type="primary" @click="onSubmit">
+        <Button class="de-tour-submit" :loading="saving" type="primary" @click="onSubmit">
           提交开单
         </Button>
       </div>

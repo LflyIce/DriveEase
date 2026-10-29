@@ -197,7 +197,7 @@ export async function initSchema(dataSource: DataSource): Promise<void> {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       enterprise_name TEXT NOT NULL, insurance_type TEXT NOT NULL,
       project_name TEXT, person_in_charge TEXT, contact_phone TEXT,
-      sum_insured REAL, premium REAL, expenses REAL, balance REAL,
+      sum_insured REAL, premium REAL, fee REAL, expenses REAL, balance REAL,
       insurance_company TEXT, sales_person TEXT,
       start_date TEXT, end_date TEXT, attachment TEXT, remark TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -225,8 +225,9 @@ export async function initSchema(dataSource: DataSource): Promise<void> {
      WHERE r.code = 'admin'
        AND NOT EXISTS (SELECT 1 FROM role_permission rp WHERE rp.role_id = r.id AND rp.permission_id = p.id)`,
   );
-  // 非车备注（表建成次日的增量列，走 ensureColumn 兼容旧库；新库建表 DDL 已含）
+  // 非车备注/费用（表建成后的增量列，走 ensureColumn 兼容旧库；新库建表 DDL 已含）
   await ensureColumn(dataSource, 'non_vehicle_policy', 'remark', 'TEXT');
+  await ensureColumn(dataSource, 'non_vehicle_policy', 'fee', 'REAL');
 }
 
 export async function ensureColumn(

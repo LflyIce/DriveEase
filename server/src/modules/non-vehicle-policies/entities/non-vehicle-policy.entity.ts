@@ -2,7 +2,7 @@ import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 /**
  * 非车保单：与 policy 平行的独立资源（无客户/车辆关联）。
- * balance 结余 = premium - expenses，服务层写入前计算。
+ * balance 结余 = fee - expenses，服务层写入前计算（premium 仅记录，不参与结余）。
  * attachment 附件：多文件 URL 逗号拼接（与 policy.quotation 同方案）。
  */
 @Entity('non_vehicle_policy')
@@ -17,6 +17,7 @@ export class NonVehiclePolicy {
   @Column({ name: 'contact_phone', nullable: true }) contactPhone: string | null;
   @Column({ name: 'sum_insured', nullable: true }) sumInsured: number | null;
   @Column({ nullable: true }) premium: number | null;
+  @Column({ nullable: true }) fee: number | null;
   @Column({ nullable: true }) expenses: number | null;
   @Column({ nullable: true }) balance: number | null;
   @Column({ name: 'insurance_company', nullable: true }) insuranceCompany: string | null;

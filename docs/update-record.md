@@ -348,3 +348,37 @@
 - 实现：`views/shared/enter-to-next.ts`（共享助手，依赖 vben 必填行类名 `form-is-required`，按 DOM 顺序取下一个必填项的首个键入控件）；两个 quick-create 在 `<Form>` 外包一层 `@keydown.capture`。
 - 细节：备注 textarea 回车保留换行不跳；RadioGroup（保期/业务类型）非键入控件自动跳过；从可选字段（保费/支出等）回车跳到其后的下一个必填；尾部无必填则不动。
 - 验证（Playwright）：车保 客户名称→客户类型→手机号码→业务员→车牌号→保险公司→投保日期→停住（保期被跳过）；非车 企业名称→险种→负责人→联系电话；前端 typecheck 本次文件零错误。
+
+## 2026-10-29 非车保单：费用字段（结余改口径）+ 必填收紧 + 到期快捷筛选
+
+### 背景
+
+- 非车开单需要记录「费用」金额（与保费同类型），且**结余口径改为 费用 − 支出**（保费仅记录，不参与结余）。
+- 项目名称/保额/保费/支出原来选填，收紧为必填（0 为合法金额）。
+- 非车查询页补齐车保已有的「月内到期 / 10日内到期」快捷筛选。
+
+### 变更范围
+
+- server：`schema.ts`（DDL 加列 + `ensureColumn('non_vehicle_policy','fee','REAL')` 旧库重启自动补列）、`entities/non-vehicle-policy.entity.ts`、`dto/create-...`（加 `fee`）、`dto/query-...`（加 `expiryWithin`）、`non-vehicle-policies.service.ts`
+- client-vue：`api/non-vehicle-policy.ts`（`fee`/`feeSum`）、`views/non-vehicle-policy/data.ts`（费用列 + 表单必填/联动）、`modules/quick-create.vue`、`modules/detail.vue`、`index.vue`
+- docs：`CLAUDE.md` 模块口径、本记录
+
+### 更新内容
+
+- **费用 `fee REAL`**：列表「保费」后新增「费用」列（右对齐金额格式），footer 合计新增 `feeSum`（筛选下全量聚合），详情抽屉加「费用」项；旧数据 `fee=null` 显示 `-`、合计 `COALESCE` 兜底。
+- **结余 = 费用 − 支出**（服务端为准；旧单落库的 balance 不动）。开单抽屉展示条与提示文案同步；联动改为 费用/支出 变化时重算。
+- **必填收紧**：项目名称/保额/保费/费用/支出 前端 `rules:'required'` + 后端显式校验（判 `undefined/null/''`，**0 合法**），回车跳必填自动覆盖新字段。
+- **到期快捷筛选**：`expiryWithin`（天）→ `end_date >= 今天 AND end_date <= 今天+N`（字典序，同车保 `policies` 口径）；工具栏「月内到期」(30, warning 橙)/「10日内到期」(10, danger 红) 切换按钮，再点取消；截止日期文字按到期临近着色（≤10 天红 / ≤30 天橙 / 已过期默认，同车保保单号口径）。
+
+### 验证记录
+
+- 已执行：server `tsc --noEmit -p server/tsconfig.json` 通过。
+- 前端 `pnpm --filter @vben/web-antd typecheck`：存量 13 个错误不变（`renewal.ts`/各 `form.vue`，均非本次改动文件）；非车相关文件零错误。
+- API E2E（dev 后端 watch 重启后 `ensureColumn` 自动补列，未 re-seed）：开单 fee=3000/expenses=1200 → 落库 balance=1800（费用−支出，保费 2000 不参与）；缺 projectName → HTTP 400「项目名称为必填」；premium/fee/expenses/sumInsured 全 0 可创建（balance=0）；list `expiryWithin=30` 含 +15 天行且 `feeSum` 聚合正确，`expiryWithin=10` 不含；测试数据已删除（无残留）。
+
+### 2026-10-29 补充：首次开单导览（driver.js）
+
+- 车保/非车两个极速开单抽屉首次打开自动播放 driver.js 分步引导（高亮+气泡），5 步：规则提示条 → 表单区（必填/回车跳转）→ 合计保费或结余展示条 → 材料上传 → 提交按钮；看完「知道了」或中途退出（Esc/×）都记 localStorage，之后不再演（`driveease_tip_policy_quickcreate_v1` / `driveease_tip_nonvehicle_quickcreate_v1`，换文案/步骤改 key 版本号即可重新对所有人播放）。
+- 新增 `views/shared/first-tour.ts`（`runFirstTour(key, steps)` 封装：中文按钮/进度/`onDestroyed` 记已读）+ `first-tour.css`（`popoverClass=de-tour-popover` 主题化：气泡用 vben 设计令牌 `hsl(var(--popover/--primary/--border/…))`，明暗主题自动适配；两个抽屉模板加 `de-tour-*` 锚点类）。依赖 `driver.js@1.10`（pnpm 装到 web-antd）。
+- 两个坑：① 进度占位符是**双花括号** `{{current}}`/`{{total}}`（单花括号不替换，显示字面量）；② 静态 `Modal.info` 方案被抽屉遮罩挡住（抽屉 z-index=2000=`--popup-z-index`，静态 Modal 拿不到上下文）——driver 气泡自带 z-index 1e9 无此问题，故弃 Modal 改 driver。
+- 验证（Playwright）：车保走完 5 步→标记写入→再开不演；非车「×」中途退出→同样记已读；明/暗两套主题截图核对气泡配色一致；typecheck 存量 13 错不变、新文件零错误。

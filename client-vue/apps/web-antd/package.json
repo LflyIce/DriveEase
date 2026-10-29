@@ -43,6 +43,7 @@
     "@vueuse/core": "catalog:",
     "ant-design-vue": "catalog:",
     "dayjs": "catalog:",
+    "driver.js": "^1.10.2",
     "gridstack": "^12.6.0",
     "pinia": "catalog:",
     "vue": "catalog:",
