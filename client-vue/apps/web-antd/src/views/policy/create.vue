@@ -11,6 +11,7 @@ import { useRouter } from 'vue-router';
 import { useVbenForm } from '#/adapter/form';
 import { createPolicyFull } from '#/api/policy';
 import { requestClient } from '#/api/request';
+import { isImageUrl, openFilePreview } from '#/views/shared/file-preview';
 
 import {
   useChargeSchema,
@@ -109,9 +110,13 @@ const onPreviewVisibleChange = (v: boolean) => {
 const onUploadPreview = (file: any, e?: Event) => {
   e?.preventDefault?.();
   const url = file.url || file.response?.url || file.thumbUrl;
-  if (url) {
+  if (!url) return;
+  // 图片走页内 Image 弹层；pdf/doc 等 Image 渲染不了，新标签打开
+  if (isImageUrl(url)) {
     previewSrc.value = url;
     previewVisible.value = true;
+  } else {
+    openFilePreview(url);
   }
 };
 

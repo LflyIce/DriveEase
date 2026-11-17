@@ -108,9 +108,10 @@ export function useColumns(): VxeTableGridColumns {
       align: 'center',
       field: 'operation',
       fixed: 'right',
+      // 不写死宽度：按内容（查看/编辑/删除按钮）自适应，minWidth 兜底
+      minWidth: 120,
       slots: { default: 'action' },
       title: '操作',
-      width: 140,
     },
   ];
 }

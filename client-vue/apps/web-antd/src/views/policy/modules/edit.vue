@@ -1,12 +1,15 @@
 <script lang="ts" setup>
 import { nextTick, reactive, ref } from 'vue';
 
+import { IconifyIcon } from '@vben/icons';
+
 import { Button, Card, Drawer, Image, message, Spin } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
 import { useVbenForm } from '#/adapter/form';
 import { getPolicy, updatePolicy } from '#/api/policy';
 import { requestClient } from '#/api/request';
+import { isImageUrl, openFilePreview } from '#/views/shared/file-preview';
 
 import {
   useChargeSchema,
@@ -131,9 +134,13 @@ const onPreviewVisibleChange = (v: boolean) => {
 };
 const onUploadPreview = (file: any) => {
   const url = file.url || file.response?.url || file.thumbUrl;
-  if (url) {
+  if (!url) return;
+  // 图片走页内 Image 弹层；pdf/doc 等 Image 渲染不了，新标签打开
+  if (isImageUrl(url)) {
     previewSrc.value = url;
     previewVisible.value = true;
+  } else {
+    openFilePreview(url);
   }
 };
 
@@ -362,16 +369,25 @@ async function onSubmit() {
                     :key="f.uid"
                     class="mt-2 flex items-center gap-2 rounded border border-gray-200 p-2"
                   >
-                    <img
-                      v-if="f.status === 'done' && (f.url || f.response?.url)"
-                      :src="f.url || f.response?.url"
-                      class="size-8 shrink-0 object-cover"
-                    />
+                    <template v-if="f.status === 'done' && (f.url || f.response?.url)">
+                      <img
+                        v-if="isImageUrl(f.url || (f.response?.url ?? ''))"
+                        :src="f.url || f.response?.url"
+                        class="size-8 shrink-0 object-cover"
+                      />
+                      <!-- 非图片（pdf/doc 等）显示文件图标，不渲染破图 -->
+                      <span
+                        v-else
+                        class="flex size-8 shrink-0 items-center justify-center bg-gray-100 text-gray-400"
+                      >
+                        <IconifyIcon icon="ant-design:file-pdf-outlined" />
+                      </span>
+                    </template>
                     <span
                       v-else
                       class="flex size-8 shrink-0 items-center justify-center bg-gray-100 text-xs text-gray-400"
                     >
-                      {{ f.status === 'uploading' ? '上传中' : 'file' }}
+                      上传中
                     </span>
                     <span class="flex-1 truncate text-xs">{{ f.name }}</span>
                     <Button

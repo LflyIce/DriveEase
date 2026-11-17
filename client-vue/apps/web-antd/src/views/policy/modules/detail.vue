@@ -13,6 +13,8 @@ import {
 } from 'ant-design-vue';
 
 import { getPolicy } from '#/api/policy';
+import FileCard from '#/views/shared/file-card.vue';
+import { isImageUrl } from '#/views/shared/file-preview';
 
 defineOptions({ name: 'PolicyDetail' });
 
@@ -429,19 +431,17 @@ defineExpose({ show });
                   class="flex h-[90px] w-[120px] items-center justify-center overflow-hidden rounded border border-gray-200 bg-gray-50"
                 >
                   <Image
-                    v-if="m.url && m.type === 'image'"
+                    v-if="m.url && isImageUrl(m.url)"
                     :height="90"
                     :src="m.url"
                     :width="120"
                   />
-                  <a
-                    v-else-if="m.url && m.type === 'file'"
-                    :href="m.url"
-                    target="_blank"
-                    class="px-2 text-center text-xs text-blue-600"
-                  >
-                    查看文件
-                  </a>
+                  <FileCard
+                    v-else-if="m.url"
+                    :label="m.label"
+                    :url="m.url"
+                    class="h-[90px] w-[120px]"
+                  />
                   <span v-else class="text-xs text-gray-400">未上传</span>
                 </div>
               </div>

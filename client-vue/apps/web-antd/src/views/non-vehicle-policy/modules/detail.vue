@@ -12,6 +12,8 @@ import {
 } from 'ant-design-vue';
 
 import { getNonVehiclePolicy } from '#/api/non-vehicle-policy';
+import FileCard from '#/views/shared/file-card.vue';
+import { isImageUrl } from '#/views/shared/file-preview';
 
 defineOptions({ name: 'NonVehicleDetail' });
 
@@ -121,13 +123,21 @@ defineExpose({ show });
           <div class="mb-2 text-sm">附件</div>
           <ImagePreviewGroup>
             <div class="flex flex-wrap gap-3">
-              <Image
-                v-for="att in attachments"
-                :key="att.url"
-                :src="att.url"
-                :title="att.label"
-                class="h-24 w-24 rounded-md object-cover"
-              />
+              <template v-for="(att, i) in attachments" :key="att.url">
+                <!-- 图片走 Image 灯箱；pdf/doc 用文件卡片（Image 渲染不了） -->
+                <Image
+                  v-if="isImageUrl(att.url)"
+                  :src="att.url"
+                  :title="att.label"
+                  class="h-24 w-24 rounded-md object-cover"
+                />
+                <FileCard
+                  v-else
+                  :index="attachments.length > 1 ? i + 1 : undefined"
+                  :url="att.url"
+                  class="h-24 w-24"
+                />
+              </template>
             </div>
           </ImagePreviewGroup>
         </div>
