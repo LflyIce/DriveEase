@@ -156,6 +156,9 @@ defineExpose({ show });
           <DescriptionsItem label="投保日期">
             {{ orDash(detail.policyDate) }}
           </DescriptionsItem>
+          <DescriptionsItem label="商业险日期">
+            {{ orDash(detail.commercialDate) }}
+          </DescriptionsItem>
           <DescriptionsItem label="起保日期">
             {{ orDash(detail.effectiveDate || detail.startDate) }}
           </DescriptionsItem>

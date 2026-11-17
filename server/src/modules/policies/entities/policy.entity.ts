@@ -18,6 +18,8 @@ export class Policy {
 
   @Column({ name: 'issue_time', nullable: true }) issueTime: string | null;
   @Column({ name: 'policy_date', nullable: true }) policyDate: string | null;
+  // 商业险日期（独立日期字段，自由 TEXT；旧库 ensureColumn 补列）
+  @Column({ name: 'commercial_date', nullable: true }) commercialDate: string | null;
   @Column({ name: 'effective_date', nullable: true }) effectiveDate: string | null;
   @Column({ name: 'expiry_date', nullable: true }) expiryDate: string | null;
   @Column({ name: 'certificate_type', nullable: true }) certificateType: string | null;

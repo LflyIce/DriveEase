@@ -65,6 +65,7 @@ const DATE_FIELDS = [
   'nextInspectionDate',
   'policyDate',
   'expiryDate',
+  'commercialDate',
 ];
 
 // 费率字段：UI 不预填，提交时空值补默认 100

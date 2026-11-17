@@ -136,6 +136,7 @@ export class PoliciesService {
         sumInsured: dto.sumInsured,
         issueTime: dto.issueTime || null,
         policyDate: dto.policyDate || null,
+        commercialDate: dto.commercialDate || null,
         effectiveDate: resolvedStartDate,
         expiryDate: resolvedEndDate,
         startDate: resolvedStartDate,
@@ -170,14 +171,14 @@ export class PoliciesService {
     await this.dataSource.query(
       `UPDATE policy SET
          policy_number=?, insurance_type=?, premium=?, sum_insured=?,
-         policy_date=?, effective_date=?, expiry_date=?, start_date=?, end_date=?,
+         policy_date=?, commercial_date=?, effective_date=?, expiry_date=?, start_date=?, end_date=?,
          insurance_company=?, contact_person=?, contact_phone=?, sales_person=?,
          status=?, remark=?,
          traffic_premium=?, travel_tax=?, commercial_premium=?, surcharge_premium=?, surcharge_premium2=?,
          commission=?, expenses=?,
          traffic_rate=?, traffic_charge=?, commercial_rate=?, commercial_charge=?,
          surcharge_rate=?, surcharge_charge=?, surcharge_rate2=?, surcharge_charge2=?,
-         total_charge=?, updated_at=CURRENT_TIMESTAMP
+         total_charge=?, quotation=?, policy_file=?, updated_at=CURRENT_TIMESTAMP
        WHERE id=?`,
       [
         pick(dto.policyNumber, e.policy_number),
@@ -185,6 +186,7 @@ export class PoliciesService {
         pick(dto.premium, e.premium),
         pick(dto.sumInsured, e.sum_insured),
         policyDate,
+        pick(dto.commercialDate, e.commercial_date) ?? null,
         policyDate,
         expiryDate,
         policyDate,
@@ -211,9 +213,53 @@ export class PoliciesService {
         pick(dto.surchargeRate2, e.surcharge_rate2),
         pick(dto.surchargeCharge2, e.surcharge_charge2),
         pick(dto.totalCharge, e.total_charge),
+        pick(dto.quotation, e.quotation) ?? null,
+        pick(dto.policyFile, e.policy_file) ?? null,
         id,
       ],
     );
+
+    // 材料：客户/车辆材料为档案级，编辑保单时同步更新（未传字段不改，传 null 表示移除）
+    if (
+      dto.ssnFront !== undefined ||
+      dto.ssnBack !== undefined ||
+      dto.businessLicense !== undefined
+    ) {
+      const c = (
+        (await this.dataSource.query(
+          'SELECT ssn_front, ssn_back, business_license FROM customer WHERE id = ?',
+          [e.customer_id],
+        )) as any[]
+      )[0];
+      await this.dataSource.query(
+        'UPDATE customer SET ssn_front=?, ssn_back=?, business_license=? WHERE id=?',
+        [
+          dto.ssnFront !== undefined ? dto.ssnFront : (c?.ssn_front ?? null),
+          dto.ssnBack !== undefined ? dto.ssnBack : (c?.ssn_back ?? null),
+          dto.businessLicense !== undefined
+            ? dto.businessLicense
+            : (c?.business_license ?? null),
+          e.customer_id,
+        ],
+      );
+    }
+    if (dto.drivingFront !== undefined || dto.drivingBack !== undefined) {
+      const v = (
+        (await this.dataSource.query(
+          'SELECT driving_front, driving_back FROM vehicle WHERE id = ?',
+          [e.vehicle_id],
+        )) as any[]
+      )[0];
+      await this.dataSource.query(
+        'UPDATE vehicle SET driving_front=?, driving_back=? WHERE id=?',
+        [
+          dto.drivingFront !== undefined ? dto.drivingFront : (v?.driving_front ?? null),
+          dto.drivingBack !== undefined ? dto.drivingBack : (v?.driving_back ?? null),
+          e.vehicle_id,
+        ],
+      );
+    }
+
     this.logger.log('编辑保单', e.policy_number);
     const rows = (await this.dataSource.query('SELECT * FROM policy WHERE id = ?', [id])) as any[];
     return rows[0];
@@ -346,6 +392,7 @@ export class PoliciesService {
         endDate: expiryDate,
         status: '待生效',
         policyDate,
+        commercialDate: b.commercialDate ?? null,
         effectiveDate: policyDate,
         expiryDate: expiryDate,
         insuranceCompany: b.insuranceCompany ?? null,

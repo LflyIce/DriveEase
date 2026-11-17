@@ -12,6 +12,7 @@ export class CreatePolicyDto {
 
   @ApiPropertyOptional() @IsOptional() issueTime?: string;
   @ApiPropertyOptional() @IsOptional() policyDate?: string;
+  @ApiPropertyOptional() @IsOptional() commercialDate?: string;
   @ApiPropertyOptional() @IsOptional() effectiveDate?: string;
   @ApiPropertyOptional() @IsOptional() expiryDate?: string;
   @ApiPropertyOptional() @IsOptional() startDate?: string;

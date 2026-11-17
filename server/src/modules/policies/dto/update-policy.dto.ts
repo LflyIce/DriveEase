@@ -10,6 +10,7 @@ export class UpdatePolicyDto {
   @ApiPropertyOptional() @IsOptional() sumInsured?: number;
   @ApiPropertyOptional() @IsOptional() issueTime?: string;
   @ApiPropertyOptional() @IsOptional() policyDate?: string;
+  @ApiPropertyOptional() @IsOptional() commercialDate?: string;
   @ApiPropertyOptional() @IsOptional() effectiveDate?: string;
   @ApiPropertyOptional() @IsOptional() expiryDate?: string;
   @ApiPropertyOptional() @IsOptional() startDate?: string;
@@ -42,4 +43,13 @@ export class UpdatePolicyDto {
   @ApiPropertyOptional() @IsOptional() surchargeRate2?: number;
   @ApiPropertyOptional() @IsOptional() surchargeCharge2?: number;
   @ApiPropertyOptional() @IsOptional() totalCharge?: number;
+
+  // 材料（编辑保单时同步更新客户/车辆/保单档案；未传字段不改）
+  @ApiPropertyOptional() @IsOptional() ssnFront?: any;
+  @ApiPropertyOptional() @IsOptional() ssnBack?: any;
+  @ApiPropertyOptional() @IsOptional() businessLicense?: any;
+  @ApiPropertyOptional() @IsOptional() drivingFront?: any;
+  @ApiPropertyOptional() @IsOptional() drivingBack?: any;
+  @ApiPropertyOptional() @IsOptional() quotation?: any;
+  @ApiPropertyOptional() @IsOptional() policyFile?: any;
 }

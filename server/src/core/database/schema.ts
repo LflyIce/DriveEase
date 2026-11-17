@@ -38,6 +38,7 @@ export async function initSchema(dataSource: DataSource): Promise<void> {
 
   await ensureColumn(dataSource, 'policy', 'issue_time', 'TEXT');
   await ensureColumn(dataSource, 'policy', 'policy_date', 'TEXT');
+  await ensureColumn(dataSource, 'policy', 'commercial_date', 'TEXT');
   await ensureColumn(dataSource, 'policy', 'effective_date', 'TEXT');
   await ensureColumn(dataSource, 'policy', 'expiry_date', 'TEXT');
   await ensureColumn(dataSource, 'policy', 'certificate_type', 'TEXT');

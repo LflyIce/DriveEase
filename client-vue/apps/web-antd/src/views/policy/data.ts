@@ -377,6 +377,12 @@ export function usePremiumSchema(): VbenFormSchema[] {
       label: '到期日期',
       rules: 'required',
     },
+    {
+      component: 'DatePicker',
+      componentProps: { style: 'width:100%' },
+      fieldName: 'commercialDate',
+      label: '商业险日期',
+    },
     numLinked('trafficPremium', '交强险保费'),
     numLinked('travelTax', '车船税'),
     numLinked('commercialPremium', '商业险保费'),
@@ -642,6 +648,12 @@ export function useQuickCreateSchema(
       fieldName: 'policyDate',
       label: '投保日期',
       rules: 'required',
+    },
+    {
+      component: 'DatePicker',
+      componentProps: { style: 'width:100%' },
+      fieldName: 'commercialDate',
+      label: '商业险日期',
     },
     {
       component: 'RadioGroup',

@@ -28,6 +28,7 @@ export namespace PolicyApi {
     endDate?: null | string;
     issueTime?: null | string;
     policyDate?: null | string;
+    commercialDate?: null | string; // 商业险日期（policy.commercial_date）
     status: PolicyStatus;
     certificateType?: null | string;
     certificateNumber?: null | string;

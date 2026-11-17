@@ -42,6 +42,7 @@ export class CreatePolicyFullDto {
   @ApiPropertyOptional() @IsOptional() premium?: any;
   @ApiPropertyOptional() @IsOptional() sumInsured?: any;
   @ApiPropertyOptional() @IsOptional() policyDate?: any;
+  @ApiPropertyOptional() @IsOptional() commercialDate?: any;
   @ApiPropertyOptional() @IsOptional() expiryDate?: any;
   @ApiPropertyOptional() @IsOptional() insuranceCompany?: any;
   @ApiPropertyOptional() @IsOptional() salesPerson?: any;

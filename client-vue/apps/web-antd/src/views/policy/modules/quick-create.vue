@@ -198,6 +198,12 @@ async function onSubmit() {
       plateNumber: val.plateNumber,
       insuranceCompany: val.insuranceCompany,
       policyDate: policyDate.format('YYYY-MM-DD'),
+      commercialDate: val.commercialDate
+        ? (dayjs.isDayjs(val.commercialDate)
+            ? val.commercialDate
+            : dayjs(val.commercialDate)
+          ).format('YYYY-MM-DD')
+        : undefined,
       expiryDate: policyDate.add(years, 'year').format('YYYY-MM-DD'),
       // 保费拆分（均可空）：非车保费沿用录入页映射存 surchargePremium 列；合计为展示条联动值
       trafficPremium: val.trafficPremium ?? null,
