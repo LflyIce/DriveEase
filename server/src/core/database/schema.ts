@@ -212,6 +212,7 @@ export async function initSchema(dataSource: DataSource): Promise<void> {
     ['nonvehicle:create', '非车开单', 'action', 'non-vehicle', 1],
     ['nonvehicle:update', '非车编辑', 'action', 'non-vehicle', 3],
     ['nonvehicle:delete', '非车删除', 'action', 'non-vehicle', 2],
+    ['nonvehicle:export', '非车导出', 'action', 'non-vehicle', 4],
   ];
   for (const [code, name, type, module, sort] of nvPerms) {
     await q(
@@ -223,7 +224,19 @@ export async function initSchema(dataSource: DataSource): Promise<void> {
   await q(
     `INSERT INTO role_permission (role_id, permission_id)
      SELECT r.id, p.id FROM role r JOIN permission p
-       ON p.code IN ('menu:non-vehicle', 'nonvehicle:create', 'nonvehicle:update', 'nonvehicle:delete')
+       ON p.code IN ('menu:non-vehicle', 'nonvehicle:create', 'nonvehicle:update', 'nonvehicle:delete', 'nonvehicle:export')
+     WHERE r.code = 'admin'
+       AND NOT EXISTS (SELECT 1 FROM role_permission rp WHERE rp.role_id = r.id AND rp.permission_id = p.id)`,
+  );
+  // 保单导出权限码：旧库免 re-seed——启动时缺则幂等补种，并给 admin 角色补授权
+  await q(
+    `INSERT INTO permission (code, name, type, module, sort)
+     SELECT 'policy:export', '保单导出', 'action', 'policy', 6
+     WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'policy:export')`,
+  );
+  await q(
+    `INSERT INTO role_permission (role_id, permission_id)
+     SELECT r.id, p.id FROM role r JOIN permission p ON p.code = 'policy:export'
      WHERE r.code = 'admin'
        AND NOT EXISTS (SELECT 1 FROM role_permission rp WHERE rp.role_id = r.id AND rp.permission_id = p.id)`,
   );

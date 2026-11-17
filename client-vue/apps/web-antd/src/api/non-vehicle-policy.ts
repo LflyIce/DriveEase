@@ -1,6 +1,6 @@
 import type { Recordable } from '@vben/types';
 
-import { requestClient } from '#/api/request';
+import { exportByFetch, requestClient } from '#/api/request';
 
 export namespace NonVehiclePolicyApi {
   export interface NonVehiclePolicy {
@@ -73,4 +73,14 @@ export function updateNonVehiclePolicy(id: number, data: Recordable<any>) {
 
 export function deleteNonVehiclePolicy(id: number) {
   return requestClient.delete(`/non-vehicle-policies/${id}`);
+}
+
+/**
+ * 导出非车保单 Excel：按当前查询条件（后端不分页，导出筛选命中的全部数据，非全表）。
+ * 附件字段以 URL 地址文本呈现。
+ */
+export function exportNonVehiclePolicies(
+  params: Recordable<any>,
+): Promise<Blob> {
+  return exportByFetch('/non-vehicle-policies/export', params);
 }

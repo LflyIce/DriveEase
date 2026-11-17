@@ -24,10 +24,14 @@ export class PoliciesService {
     private readonly logger: LogService,
   ) {}
 
-  async findMany(
-    query: QueryPolicyDto,
-  ): Promise<PaginatedResult<any> & { premiumSum: number; sumInsuredSum: number }> {
-    const { page = 1, pageSize = 10 } = query;
+  /**
+   * 列表/导出共用筛选条件（口径一致）：关键字（保单号/客户名/电话/车牌）、状态、
+   * 到期窗口、业务员、业务类型、创建时间范围。
+   */
+  private buildPolicyWhere(query: QueryPolicyDto): {
+    where: string;
+    params: any[];
+  } {
     const conditions: string[] = [];
     const params: any[] = [];
     if (query.keyword) {
@@ -66,7 +70,17 @@ export class PoliciesService {
       conditions.push('p.created_at <= ?');
       params.push(query.createdEnd.includes(':') ? query.createdEnd : `${query.createdEnd} 23:59:59`);
     }
-    const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+    return {
+      where: conditions.length ? 'WHERE ' + conditions.join(' AND ') : '',
+      params,
+    };
+  }
+
+  async findMany(
+    query: QueryPolicyDto,
+  ): Promise<PaginatedResult<any> & { premiumSum: number; sumInsuredSum: number }> {
+    const { page = 1, pageSize = 10 } = query;
+    const { where, params } = this.buildPolicyWhere(query);
 
     // count 与保费/保额合计共用一条 SQL（与数据行同一 WHERE，口径一致；合计跟筛选走，非当前页小计）
     const statRows = (await this.dataSource.query(
@@ -99,6 +113,22 @@ export class PoliciesService {
       premiumSum: Number(statRows[0]?.premium_sum) || 0,
       sumInsuredSum: Number(statRows[0]?.sum_insured_sum) || 0,
     };
+  }
+
+  /**
+   * 导出数据：与列表同筛选条件、不分页（导出当前查询到的全部匹配数据，非全表）。
+   * 返回 snake_case 行（含 customer_name/customer_phone/plate_number 等 JOIN 列）。
+   */
+  async findAllForExport(query: QueryPolicyDto): Promise<any[]> {
+    const { where, params } = this.buildPolicyWhere(query);
+    const rows = (await this.dataSource.query(
+      `SELECT p.*, c.name as customer_name, c.phone as customer_phone,
+              v.plate_number, v.brand as vehicle_brand, v.model as vehicle_model
+       ${POLICY_LIST_FROM} ${where} ORDER BY p.id DESC`,
+      params,
+    )) as any[];
+    this.logger.log('导出保单', `${rows.length} 条`);
+    return rows;
   }
 
   // 详情：保单全字段 + 关联客户/车辆全字段（含证件照片 URL）。

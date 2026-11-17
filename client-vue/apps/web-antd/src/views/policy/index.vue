@@ -11,7 +11,12 @@ import { Button, message, Popconfirm, Tag } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { deletePolicy, getPolicyList, updatePolicyStatus } from '#/api/policy';
+import {
+  deletePolicy,
+  exportPolicies,
+  getPolicyList,
+  updatePolicyStatus,
+} from '#/api/policy';
 
 import { formatMoney, useColumns, useGridFormSchema } from './data';
 import DetailDrawer from './modules/detail.vue';
@@ -57,6 +62,47 @@ const quickCreateRef = ref();
 /** 到期快捷筛选窗口（天）：undefined=不过滤；30=月内到期；10=10日内到期 */
 const expiryWithin = ref<number | undefined>();
 
+/** 导出中 */
+const exporting = ref(false);
+/** 最近一次列表查询的表单值（导出复用同一筛选条件） */
+let lastFormValues: Record<string, any> = {};
+
+/** 列表/导出共用查询参数：RangePicker 拆成 createdStart/createdEnd 日期 */
+function buildQueryParams(formValues: Record<string, any>) {
+  const { createdRange, ...rest } = formValues ?? {};
+  const [start, end] = createdRange ?? [];
+  return {
+    ...rest,
+    createdStart: start ? dayjs(start).format('YYYY-MM-DD') : undefined,
+    createdEnd: end ? dayjs(end).format('YYYY-MM-DD') : undefined,
+    expiryWithin: expiryWithin.value,
+  };
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/** 导出当前查询到的数据（按筛选条件，非全表） */
+async function onExport() {
+  exporting.value = true;
+  try {
+    const blob = await exportPolicies(buildQueryParams(lastFormValues));
+    downloadBlob(blob, `保单列表_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`);
+  } catch (e: any) {
+    message.error(e?.message || '导出失败');
+  } finally {
+    exporting.value = false;
+  }
+}
+
 // 保费/保额合计：后端按当前筛选条件全量聚合随列表返回（非当前页小计），footerMethod 消费
 const premiumSum = ref(0);
 const sumInsuredSum = ref(0);
@@ -82,16 +128,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
     proxyConfig: {
       ajax: {
         query: async ({ page }, formValues) => {
-          // 创建时间 RangePicker 给 dayjs 数组，拆成后端的 createdStart/createdEnd 日期
-          const { createdRange, ...rest } = formValues as Record<string, any>;
-          const [start, end] = createdRange ?? [];
+          lastFormValues = formValues as Record<string, any>;
           const res = await getPolicyList({
             page: page.currentPage,
             pageSize: page.pageSize,
-            ...rest,
-            createdStart: start ? dayjs(start).format('YYYY-MM-DD') : undefined,
-            createdEnd: end ? dayjs(end).format('YYYY-MM-DD') : undefined,
-            expiryWithin: expiryWithin.value,
+            ...buildQueryParams(lastFormValues),
           });
           premiumSum.value = res.premiumSum ?? 0;
           sumInsuredSum.value = res.sumInsuredSum ?? 0;
@@ -155,17 +196,6 @@ function onDelete(row: PolicyApi.Policy) {
     <Grid>
       <template #toolbar-actions>
         <div class="flex items-center gap-2">
-          <!-- 极简开单：主按钮 + 加号，左侧抽屉录入（policy:create 权限） -->
-          <Button
-            v-access:code="['policy:create']"
-            type="primary"
-            @click="onQuickCreate"
-          >
-            <template #icon>
-              <IconifyIcon icon="ant-design:plus-outlined" />
-            </template>
-            开单
-          </Button>
           <!-- 月内到期：warning 橙 + 日历图标；激活实心 -->
           <Button
             class="btn-warn"
@@ -187,6 +217,28 @@ function onDelete(row: PolicyApi.Policy) {
               <IconifyIcon icon="ant-design:warning-outlined" />
             </template>
             10日内到期
+          </Button>
+          <!-- 极简开单：主按钮 + 加号，左侧抽屉录入（policy:create 权限） -->
+          <Button
+            v-access:code="['policy:create']"
+            type="primary"
+            @click="onQuickCreate"
+          >
+            <template #icon>
+              <IconifyIcon icon="ant-design:plus-outlined" />
+            </template>
+            开单
+          </Button>
+          <!-- 导出：按当前查询条件导出 Excel（policy:export 权限） -->
+          <Button
+            v-access:code="['policy:export']"
+            :loading="exporting"
+            @click="onExport"
+          >
+            <template #icon>
+              <IconifyIcon icon="ant-design:download-outlined" />
+            </template>
+            导出
           </Button>
         </div>
       </template>

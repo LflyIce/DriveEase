@@ -24,6 +24,7 @@
     "cors": "^2.8.5",
     "cos-nodejs-sdk-v5": "^2.15.4",
     "dayjs": "^1.11.0",
+    "exceljs": "^4.4.0",
     "multer": "^2.2.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",

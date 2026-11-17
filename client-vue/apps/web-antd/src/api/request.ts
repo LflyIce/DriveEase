@@ -114,3 +114,34 @@ export const requestClient = createRequestClient(apiURL, {
 });
 
 export const baseRequestClient = new RequestClient({ baseURL: apiURL });
+
+/**
+ * 导出下载：二进制流不是 {code,message,data} 外壳，走 fetch 带 Authorization，
+ * 避免 axios 响应拦截器按 code===200 解包导致失败。
+ */
+export async function exportByFetch(
+  path: string,
+  params: Record<string, any>,
+): Promise<Blob> {
+  const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD);
+  const accessStore = useAccessStore();
+  const usp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== '') usp.append(k, String(v));
+  }
+  const base = apiURL.replace(/\/$/, '');
+  const res = await fetch(`${base}${path}?${usp.toString()}`, {
+    headers: { Authorization: `Bearer ${accessStore.accessToken}` },
+  });
+  if (!res.ok) {
+    let msg = `导出失败（${res.status}）`;
+    try {
+      const j = await res.json();
+      if (j?.message) msg = j.message;
+    } catch {
+      // 非 JSON 错误体，保留默认提示
+    }
+    throw new Error(msg);
+  }
+  return await res.blob();
+}

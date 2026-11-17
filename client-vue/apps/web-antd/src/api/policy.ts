@@ -1,6 +1,6 @@
 import type { Recordable } from '@vben/types';
 
-import { requestClient } from '#/api/request';
+import { exportByFetch, requestClient } from '#/api/request';
 
 export namespace PolicyApi {
   /** 保单状态（与后端 policy.status CHECK 约束一致） */
@@ -165,4 +165,12 @@ export function updatePolicyStatus(id: number, status: PolicyApi.PolicyStatus) {
 
 export function deletePolicy(id: number) {
   return requestClient.delete(`/policies/${id}`);
+}
+
+/**
+ * 导出保单 Excel：按当前查询条件（后端不分页，导出筛选命中的全部数据，非全表）。
+ * 图片/材料类字段在表里以 URL 地址文本呈现。
+ */
+export function exportPolicies(params: Recordable<any>): Promise<Blob> {
+  return exportByFetch('/policies/export', params);
 }

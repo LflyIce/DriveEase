@@ -16,19 +16,11 @@ export class NonVehiclePoliciesService {
   ) {}
 
   /** 列表：关键字（企业/项目/负责人/电话）+ 业务员 + 创建时间范围；合计为筛选条件下的全量聚合 */
-  async findMany(
-    query: QueryNonVehiclePolicyDto,
-  ): Promise<{
-    data: any[];
-    total: number;
-    page: number;
-    pageSize: number;
-    premiumSum: number;
-    feeSum: number;
-    expensesSum: number;
-    balanceSum: number;
-  }> {
-    const { page = 1, pageSize = 10 } = query;
+  /** 列表/导出共用筛选条件（关键字/到期窗口/业务员/创建时间范围） */
+  private buildWhere(query: QueryNonVehiclePolicyDto): {
+    where: string;
+    params: any[];
+  } {
     const conditions: string[] = [];
     const params: any[] = [];
     if (query.keyword) {
@@ -61,7 +53,26 @@ export class NonVehiclePoliciesService {
       conditions.push('created_at <= ?');
       params.push(query.createdEnd.includes(':') ? query.createdEnd : `${query.createdEnd} 23:59:59`);
     }
-    const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+    return {
+      where: conditions.length ? 'WHERE ' + conditions.join(' AND ') : '',
+      params,
+    };
+  }
+
+  async findMany(
+    query: QueryNonVehiclePolicyDto,
+  ): Promise<{
+    data: any[];
+    total: number;
+    page: number;
+    pageSize: number;
+    premiumSum: number;
+    feeSum: number;
+    expensesSum: number;
+    balanceSum: number;
+  }> {
+    const { page = 1, pageSize = 10 } = query;
+    const { where, params } = this.buildWhere(query);
 
     const statRows = (await this.dataSource.query(
       `SELECT COUNT(*) as count, COALESCE(SUM(premium), 0) as premium_sum,
@@ -84,6 +95,20 @@ export class NonVehiclePoliciesService {
       expensesSum: Number(statRows[0]?.expenses_sum) || 0,
       balanceSum: Number(statRows[0]?.balance_sum) || 0,
     };
+  }
+
+  /**
+   * 导出数据：与列表同筛选条件、不分页（导出当前查询到的全部匹配数据，非全表）。
+     * 返回 snake_case 行。
+     */
+  async findAllForExport(query: QueryNonVehiclePolicyDto): Promise<any[]> {
+    const { where, params } = this.buildWhere(query);
+    const rows = (await this.dataSource.query(
+      `SELECT * FROM non_vehicle_policy ${where} ORDER BY id DESC`,
+      params,
+    )) as any[];
+    this.logger.log('导出非车保单', `${rows.length} 条`);
+    return rows;
   }
 
   async findOneOrFail(id: number): Promise<any> {
