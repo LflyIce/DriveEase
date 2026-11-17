@@ -112,6 +112,11 @@ function onView(row: NonVehiclePolicyApi.NonVehiclePolicy) {
   detailRef.value?.show(row.id!);
 }
 
+/** 编辑：复用开单抽屉（quick-create.vue 双模式） */
+function onEdit(row: NonVehiclePolicyApi.NonVehiclePolicy) {
+  quickCreateRef.value?.show(row);
+}
+
 function onDelete(row: NonVehiclePolicyApi.NonVehiclePolicy) {
   deleteNonVehiclePolicy(row.id!).then(() => {
     message.success('删除成功');
@@ -170,6 +175,13 @@ function onDelete(row: NonVehiclePolicyApi.NonVehiclePolicy) {
 
       <template #action="{ row }">
         <Button type="link" @click="onView(row)">查看</Button>
+        <Button
+          v-access:code="['nonvehicle:update']"
+          type="link"
+          @click="onEdit(row)"
+        >
+          编辑
+        </Button>
         <Popconfirm
           v-access:code="['nonvehicle:delete']"
           title="确认删除该非车保单？"

@@ -66,6 +66,7 @@ async function seed(): Promise<void> {
       ['policy:activate', '保单激活', 'action', 'policy', 4],
       ['policy:surrender', '保单退保', 'action', 'policy', 5],
       ['nonvehicle:create', '非车开单', 'action', 'non-vehicle', 1],
+      ['nonvehicle:update', '非车编辑', 'action', 'non-vehicle', 3],
       ['nonvehicle:delete', '非车删除', 'action', 'non-vehicle', 2],
       ['renewal:create', '续保新增', 'action', 'renewal', 1],
       ['renewal:delete', '续保删除', 'action', 'renewal', 2],

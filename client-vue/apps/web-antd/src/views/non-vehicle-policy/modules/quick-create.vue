@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { nextTick, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 
 import { IconifyIcon } from '@vben/icons';
 import { useUserStore } from '@vben/stores';
@@ -8,7 +8,11 @@ import { Button, Drawer, Image, message, Upload } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
 import { useVbenForm } from '#/adapter/form';
-import { createNonVehiclePolicy } from '#/api/non-vehicle-policy';
+import {
+  createNonVehiclePolicy,
+  type NonVehiclePolicyApi,
+  updateNonVehiclePolicy,
+} from '#/api/non-vehicle-policy';
 import { requestClient } from '#/api/request';
 import { enterToNextRequired } from '#/views/shared/enter-to-next';
 import { runFirstTour } from '#/views/shared/first-tour';
@@ -23,6 +27,11 @@ const userStore = useUserStore();
 
 const open = ref(false);
 const saving = ref(false);
+// 有 id 即编辑模式（复用同一抽屉与表单）
+const editingId = ref<number>();
+
+const title = computed(() => (editingId.value ? '编辑非车保单' : '极速开单'));
+const submitText = computed(() => (editingId.value ? '保存修改' : '提交开单'));
 
 // 结余 = 费用 - 支出：非表单字段，联动计算，展示条呈现（默认 0，可为负）
 const balance = ref(0);
@@ -94,10 +103,43 @@ function uploadedUrls(): string[] {
     .filter(Boolean);
 }
 
-function show() {
+function show(row?: NonVehiclePolicyApi.NonVehiclePolicy) {
   open.value = true;
-  // 默认值：起保时间=今天；业务员=当前登录人
   nextTick(() => {
+    // 编辑：回显（日期转 dayjs、附件逗号拆分回填、结余按 费用-支出 初始化）
+    if (row?.id) {
+      editingId.value = row.id;
+      formApi.setValues({
+        enterpriseName: row.enterpriseName,
+        insuranceType: row.insuranceType,
+        projectName: row.projectName ?? undefined,
+        personInCharge: row.personInCharge,
+        contactPhone: row.contactPhone,
+        sumInsured: row.sumInsured ?? undefined,
+        premium: row.premium ?? undefined,
+        fee: row.fee ?? undefined,
+        expenses: row.expenses ?? undefined,
+        insuranceCompany: row.insuranceCompany,
+        salesPerson: row.salesPerson,
+        startDate: row.startDate ? dayjs(row.startDate) : undefined,
+        endDate: row.endDate ? dayjs(row.endDate) : undefined,
+        remark: row.remark ?? undefined,
+      });
+      balance.value = Number(row.fee ?? 0) - Number(row.expenses ?? 0);
+      fileList.value = (row.attachment ?? '')
+        .split(',')
+        .map((s: string) => s.trim())
+        .filter(Boolean)
+        .map((url: string, idx: number) => ({
+          uid: `${idx}`,
+          name: url.split('/').pop() || `附件${idx + 1}`,
+          status: 'done',
+          url,
+        }));
+      return;
+    }
+    // 新建：默认值（起保时间=今天；业务员=当前登录人）+ 首次导览
+    editingId.value = undefined;
     formApi.setValues({
       startDate: dayjs(),
       salesPerson: userStore.userInfo?.username,
@@ -146,6 +188,7 @@ function reset() {
   formApi.resetForm();
   fileList.value = [];
   balance.value = 0;
+  editingId.value = undefined;
 }
 
 function fmt(v: any): string {
@@ -177,7 +220,7 @@ async function onSubmit() {
   saving.value = true;
   try {
     // 结余后端按 费用-支出 重算为准，前端不重复提交
-    const res = await createNonVehiclePolicy({
+    const payload = {
       enterpriseName: val.enterpriseName,
       insuranceType: val.insuranceType,
       projectName: val.projectName || undefined,
@@ -191,11 +234,16 @@ async function onSubmit() {
       salesPerson: val.salesPerson,
       startDate: fmt(val.startDate),
       endDate: fmt(val.endDate),
-      remark: val.remark || undefined,
+      remark: val.remark || null,
       // 附件不分类，多文件 URL 逗号拼接（详情页拆开逐张展示）
       attachment: urls.join(','),
-    });
-    message.success(`开单成功：${res?.enterpriseName ?? ''}`);
+    };
+    const res = editingId.value
+      ? await updateNonVehiclePolicy(editingId.value, payload)
+      : await createNonVehiclePolicy(payload);
+    message.success(
+      `${editingId.value ? '保存成功' : '开单成功'}：${res?.enterpriseName ?? ''}`,
+    );
     open.value = false;
     reset();
     emit('success');
@@ -208,7 +256,7 @@ async function onSubmit() {
 </script>
 
 <template>
-  <Drawer v-model:open="open" placement="left" title="极速开单" :width="520">
+  <Drawer v-model:open="open" placement="left" :title="title" :width="520">
     <!-- 业务规则提示（de-tour-intro：首次导览锚点） -->
     <div
       class="de-tour-intro mb-3 rounded-md bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-400 dark:bg-gray-800/60"
@@ -260,7 +308,7 @@ async function onSubmit() {
       <div class="flex justify-end gap-2">
         <Button @click="open = false">取 消</Button>
         <Button class="de-tour-submit" :loading="saving" type="primary" @click="onSubmit">
-          提交开单
+          {{ submitText }}
         </Button>
       </div>
     </template>

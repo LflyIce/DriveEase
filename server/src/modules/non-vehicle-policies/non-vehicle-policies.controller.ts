@@ -1,8 +1,9 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { CreateNonVehiclePolicyDto } from './dto/create-non-vehicle-policy.dto';
 import { QueryNonVehiclePolicyDto } from './dto/query-non-vehicle-policy.dto';
+import { UpdateNonVehiclePolicyDto } from './dto/update-non-vehicle-policy.dto';
 import { NonVehiclePoliciesService } from './non-vehicle-policies.service';
 
 @ApiTags('non-vehicle-policies')
@@ -24,10 +25,21 @@ export class NonVehiclePoliciesController {
 
   @Post()
   @HttpCode(200)
-  @ApiOperation({ summary: '非车极速开单（结余=保费-支出服务端计算）' })
+  @ApiOperation({ summary: '非车极速开单（结余=费用-支出服务端计算）' })
   @RequirePermissions('nonvehicle:create')
   create(@Body() dto: CreateNonVehiclePolicyDto) {
     return this.service.createOne(dto);
+  }
+
+  @Put(':id')
+  @HttpCode(200)
+  @ApiOperation({ summary: '编辑非车保单（结余=费用-支出服务端重算）' })
+  @RequirePermissions('nonvehicle:update')
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateNonVehiclePolicyDto,
+  ) {
+    return this.service.updateOne(id, dto);
   }
 
   @Delete(':id')

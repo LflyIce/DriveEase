@@ -66,6 +66,11 @@ export function createNonVehiclePolicy(data: Recordable<any>) {
   return requestClient.post('/non-vehicle-policies', data);
 }
 
+/** 编辑非车保单（结余由后端按 费用-支出 重算） */
+export function updateNonVehiclePolicy(id: number, data: Recordable<any>) {
+  return requestClient.put(`/non-vehicle-policies/${id}`, data);
+}
+
 export function deleteNonVehiclePolicy(id: number) {
   return requestClient.delete(`/non-vehicle-policies/${id}`);
 }

@@ -4,6 +4,7 @@ import { DataSource, Repository } from 'typeorm';
 import { LogService } from '../../shared/audit/log.service';
 import { CreateNonVehiclePolicyDto } from './dto/create-non-vehicle-policy.dto';
 import { QueryNonVehiclePolicyDto } from './dto/query-non-vehicle-policy.dto';
+import { UpdateNonVehiclePolicyDto } from './dto/update-non-vehicle-policy.dto';
 import { NonVehiclePolicy } from './entities/non-vehicle-policy.entity';
 
 @Injectable()
@@ -152,5 +153,60 @@ export class NonVehiclePoliciesService {
     await this.dataSource.query('DELETE FROM non_vehicle_policy WHERE id = ?', [id]);
     this.logger.log('删除非车保单', rows[0].enterprise_name);
     return { message: '删除成功' };
+  }
+
+  async updateOne(id: number, dto: UpdateNonVehiclePolicyDto): Promise<any> {
+    const rows = (await this.dataSource.query(
+      'SELECT * FROM non_vehicle_policy WHERE id = ?',
+      [id],
+    )) as any[];
+    const e = rows[0];
+    if (!e) throw new NotFoundException('非车保单不存在');
+
+    // 未传字段沿用原值（undefined 才兜底；不用 || 以免合法 0 被吞）
+    const pick = (val: any, fallback: any) => (val !== undefined ? val : fallback);
+    const sumInsured = pick(dto.sumInsured, e.sum_insured);
+    const premium = pick(dto.premium, e.premium);
+    const fee = pick(dto.fee, e.fee);
+    const expenses = pick(dto.expenses, e.expenses);
+    // 结余 = 费用 - 支出（派生值）：改动费用/支出时按最终值重算，未动则保留原值
+    const balance =
+      dto.fee === undefined && dto.expenses === undefined
+        ? e.balance
+        : Number(fee ?? 0) - Number(expenses ?? 0);
+
+    await this.dataSource.query(
+      `UPDATE non_vehicle_policy SET
+         enterprise_name=?, insurance_type=?, project_name=?, person_in_charge=?, contact_phone=?,
+         sum_insured=?, premium=?, fee=?, expenses=?, balance=?,
+         insurance_company=?, sales_person=?, start_date=?, end_date=?, attachment=?, remark=?,
+         updated_at=CURRENT_TIMESTAMP
+       WHERE id=?`,
+      [
+        pick(dto.enterpriseName, e.enterprise_name),
+        pick(dto.insuranceType, e.insurance_type),
+        pick(dto.projectName, e.project_name) ?? null,
+        pick(dto.personInCharge, e.person_in_charge) ?? null,
+        pick(dto.contactPhone, e.contact_phone) ?? null,
+        sumInsured ?? null,
+        premium ?? null,
+        fee ?? null,
+        expenses ?? null,
+        balance,
+        pick(dto.insuranceCompany, e.insurance_company) ?? null,
+        pick(dto.salesPerson, e.sales_person) ?? null,
+        pick(dto.startDate, e.start_date) ?? null,
+        pick(dto.endDate, e.end_date) ?? null,
+        pick(dto.attachment, e.attachment) ?? null,
+        pick(dto.remark, e.remark) ?? null,
+        id,
+      ],
+    );
+    this.logger.log(
+      '编辑非车保单',
+      e.enterprise_name,
+      `保费 ${premium ?? 0} / 费用 ${fee ?? 0} / 结余 ${balance}`,
+    );
+    return this.findOneOrFail(id);
   }
 }

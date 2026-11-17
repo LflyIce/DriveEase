@@ -209,6 +209,7 @@ export async function initSchema(dataSource: DataSource): Promise<void> {
   const nvPerms: Array<[string, string, string, string, number]> = [
     ['menu:non-vehicle', '非车查询', 'menu', 'non-vehicle', 12],
     ['nonvehicle:create', '非车开单', 'action', 'non-vehicle', 1],
+    ['nonvehicle:update', '非车编辑', 'action', 'non-vehicle', 3],
     ['nonvehicle:delete', '非车删除', 'action', 'non-vehicle', 2],
   ];
   for (const [code, name, type, module, sort] of nvPerms) {
@@ -221,7 +222,7 @@ export async function initSchema(dataSource: DataSource): Promise<void> {
   await q(
     `INSERT INTO role_permission (role_id, permission_id)
      SELECT r.id, p.id FROM role r JOIN permission p
-       ON p.code IN ('menu:non-vehicle', 'nonvehicle:create', 'nonvehicle:delete')
+       ON p.code IN ('menu:non-vehicle', 'nonvehicle:create', 'nonvehicle:update', 'nonvehicle:delete')
      WHERE r.code = 'admin'
        AND NOT EXISTS (SELECT 1 FROM role_permission rp WHERE rp.role_id = r.id AND rp.permission_id = p.id)`,
   );
